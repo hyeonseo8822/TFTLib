@@ -1,258 +1,612 @@
-// Riot 공식 Data Dragon 기반으로 깨지지 않는 정확한 이미지 주소를 매핑합니다.
+// src/assets/items/Components, src/assets/items/Completed 폴더의 이미지를 자동 매핑합니다.
+// Vite의 import.meta.glob을 사용해 빌드 시점에 모든 PNG의 URL을 한 번에 가져옵니다.
+const componentImages = import.meta.glob('../assets/items/Components/*.png', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+})
+
+const completedImages = import.meta.glob('../assets/items/Completed/*.png', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+})
+
+function getComponentImage(slug) {
+  return componentImages[`../assets/items/Components/${slug}.png`]
+}
+
+function getCompletedImage(slug) {
+  return completedImages[`../assets/items/Completed/${slug}.png`]
+}
+
+// ==========================================
+// 1. 재료 아이템 (Components) — Items.md "Components" 표 기반
+// ==========================================
 export const MATERIAL_ITEMS = [
-  { id: "1", name: "B.F. 대검", imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/1038.png" }, // BF Sword (공격력)
-  { id: "2", name: "곡궁", imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/1043.png" }, // Recurve Bow (공속)
-  { id: "3", name: "쓸데없이 큰 지팡이", imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/1058.png" }, // Large Rod (주문력)
-  { id: "4", name: "여신의 눈물", imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3070.png" }, // Tear (마나)
-  { id: "5", name: "쇠사슬 조끼", imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/1031.png" }, // Chain Vest (방어력)
-  { id: "6", name: "음전자 망토", imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/1057.png" }, // Negatron (마저)
-  { id: "7", name: "거인의 허리띠", imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/1011.png" }, // Giant's Belt (체력)
-  { id: "8", name: "연습용 장갑", imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/1051.png" }, // Gloves (치명타)
-  { id: "9", name: "뒤집개", imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/1102.png" } // Spatula (특수)
-];
+  {
+    id: '1',
+    slug: 'bf-sword',
+    name: 'B.F. 대검',
+    englishName: 'B.F. Sword',
+    description: '+10% 공격력',
+    imgUrl: getComponentImage('bf-sword'),
+  },
+  {
+    id: '2',
+    slug: 'recurve-bow',
+    name: '곡궁',
+    englishName: 'Recurve Bow',
+    description: '+10% 공격 속도',
+    imgUrl: getComponentImage('recurve-bow'),
+  },
+  {
+    id: '3',
+    slug: 'needlessly-large-rod',
+    name: '쓸데없이 큰 지팡이',
+    englishName: 'Needlessly Large Rod',
+    description: '+10 주문력',
+    imgUrl: getComponentImage('needlessly-large-rod'),
+  },
+  {
+    id: '4',
+    slug: 'tear-of-the-goddess',
+    name: '여신의 눈물',
+    englishName: 'Tear of the Goddess',
+    description: '+1 마나 재생',
+    imgUrl: getComponentImage('tear-of-the-goddess'),
+  },
+  {
+    id: '5',
+    slug: 'chain-vest',
+    name: '쇠사슬 조끼',
+    englishName: 'Chain Vest',
+    description: '+20 방어력',
+    imgUrl: getComponentImage('chain-vest'),
+  },
+  {
+    id: '6',
+    slug: 'negatron-cloak',
+    name: '음전자 망토',
+    englishName: 'Negatron Cloak',
+    description: '+20 마법 저항력',
+    imgUrl: getComponentImage('negatron-cloak'),
+  },
+  {
+    id: '7',
+    slug: 'giants-belt',
+    name: '거인의 허리띠',
+    englishName: "Giant's Belt",
+    description: '+150 체력',
+    imgUrl: getComponentImage('giants-belt'),
+  },
+  {
+    id: '8',
+    slug: 'sparring-gloves',
+    name: '연습용 장갑',
+    englishName: 'Sparring Gloves',
+    description: '+20 치명타 확률',
+    imgUrl: getComponentImage('sparring-gloves'),
+  },
+  {
+    id: '9',
+    slug: 'spatula',
+    name: '뒤집개',
+    englishName: 'Spatula',
+    description: '분명히 뭔가 하기는 할 텐데...',
+    imgUrl: getComponentImage('spatula'),
+  },
+  {
+    id: '10',
+    slug: 'frying-pan',
+    name: '프라이팬',
+    englishName: 'Frying Pan',
+    description: '...왜 여기에 이게 있는 거지?',
+    imgUrl: getComponentImage('frying-pan'),
+  },
+]
 
+// ==========================================
+// 2. 능력치 라벨 헬퍼
+// ==========================================
+// Items.md 표의 컬럼 → 한글 라벨 매핑
+function buildStats({
+  health,
+  armor,
+  magicResistance,
+  speed,
+  attackDamage,
+  abilityPower,
+  dps,
+  mana,
+}) {
+  const entries = [
+    ['체력', health, '+'],
+    ['방어력', armor, '+'],
+    ['마법 저항력', magicResistance, '+'],
+    ['공격 속도', speed, '+', '%'],
+    ['공격력', attackDamage, '+', '%'],
+    ['주문력', abilityPower, '+'],
+    ['치명타 확률', dps, '+', '%'],
+    ['마나', mana, '+'],
+  ]
+  return entries
+    .filter(([, v]) => v != null && v !== 0)
+    .map(([label, v, sign, suffix = '']) => ({
+      label,
+      value: `${sign}${v}${suffix}`,
+    }))
+}
+
+// ==========================================
+// 3. 완성 아이템 (Completed Items) — Items.md "Completed items" 표 기반
+//    recipe는 두 재료 아이템의 id 조합 (MATERIAL_ITEMS.id 참조)
+// ==========================================
 export const COMPLETED_ITEMS = [
-  // === 공격형 (Offensive) - 7 Items ===
   {
-    id: "infinity_edge",
-    name: "무한의 대검",
-    category: "공격형",
-    recipe: ["1", "8"], // BF + 장갑
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3031.png",
-    stats: [{ label: "공격력", value: "+35%" }, { label: "치명타 확률", value: "+15%" }],
-    effect: "스킬의 피해에 치명타가 적용될 수 있습니다. 치명타 확률이 100%를 초과하면 초과분 1%당 치명타 피해량이 1%로 전환됩니다.",
-    recommendedUnits: ["징크스", "진", "드레이븐"],
-    tags: ["#AD", "#치명타", "#폭발적_피해"]
+    id: 'adaptive-helm',
+    slug: 'adaptive-helm',
+    name: '적응형 투구',
+    englishName: 'Adaptive Helm',
+    category: '방어형',
+    recipe: ['4', '6'],
+    imgUrl: getCompletedImage('adaptive-helm'),
+    stats: buildStats({ magicResistance: 20, mana: 3 }),
+    effect:
+      '모든 출처에서 마나를 15% 추가로 획득합니다. 착용자의 역할에 따라 추가 보너스를 얻습니다. 탱커/전사: 방어력 및 마법 저항력 +30. 그 외 역할: 공격력 및 주문력 +10%.',
   },
   {
-    id: "deathblade",
-    name: "죽음의 검",
-    category: "공격형",
-    recipe: ["1", "1"], // BF + BF
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3072.png",
-    stats: [{ label: "공격력", value: "+55%" }],
-    effect: "추가 공격력을 대폭 얻습니다. 물리 피해 중심의 메인 캐리 기물에게 가장 직관적이고 강력한 공격력을 제공합니다.",
-    recommendedUnits: ["진", "케이틀린", "코그모"],
-    tags: ["#순수_AD", "#공격력", "#지속_딜링"]
+    id: 'archangels-staff',
+    slug: 'archangels-staff',
+    name: '대천사의 지팡이',
+    englishName: "Archangel's Staff",
+    category: '마법형',
+    recipe: ['3', '4'],
+    imgUrl: getCompletedImage('archangels-staff'),
+    stats: buildStats({ abilityPower: 30, mana: 1 }),
+    effect: '전투 시작 시: 전투 중 5초마다 주문력이 20%씩 증가합니다.',
   },
   {
-    id: "guinsoos_rageblade",
-    name: "구인수의 격노검",
-    category: "공격형",
-    recipe: ["2", "3"], // 곡궁 + 지팡이
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3124.png",
-    stats: [{ label: "공격속도", value: "+15%" }, { label: "주문력", value: "+10" }],
-    effect: "기본 공격 시 공격 속도가 5% 증가합니다. 이 효과는 전투 종료 시까지 무한히 중첩됩니다.",
-    recommendedUnits: ["징크스", "애쉬", "칼리스타"],
-    tags: ["#공격속도", "#무한중첩", "#원거리_캐리"]
+    id: 'bloodthirster',
+    slug: 'bloodthirster',
+    name: '피바라기',
+    englishName: 'Bloodthirster',
+    category: '공격형',
+    recipe: ['1', '6'],
+    imgUrl: getCompletedImage('bloodthirster'),
+    stats: buildStats({ magicResistance: 20, attackDamage: 15, abilityPower: 15 }),
+    effect:
+      '전투당 1회, 체력이 40% 이하가 되면 최대 체력의 25%에 해당하는 보호막을 최대 5초 동안 얻습니다.',
   },
   {
-    id: "last_whisper",
-    name: "최후의 속삭임",
-    category: "공격형",
-    recipe: ["2", "8"], // 곡궁 + 장갑
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3035.png",
-    stats: [{ label: "공격력", value: "+15%" }, { label: "공격속도", value: "+10%" }, { label: "치명타 확률", value: "+20%" }],
-    effect: "물리 피해를 입히면 3초 동안 대상의 방어력을 30% 감소시킵니다. 물리 덱의 핵심 필수 방깎 아이템입니다.",
-    recommendedUnits: ["에즈리얼", "트리스타나", "미스 포츈"],
-    tags: ["#방어력_감소", "#필수_유틸", "#방깎"]
+    id: 'blue-buff',
+    slug: 'blue-buff',
+    name: '푸른 파수꾼',
+    englishName: 'Blue Buff',
+    category: '마법형',
+    recipe: ['4', '4'],
+    imgUrl: getCompletedImage('blue-buff'),
+    stats: buildStats({ attackDamage: 15, abilityPower: 15, mana: 5 }),
+    effect: '모든 출처에서 공격력과 주문력을 10% 추가로 획득합니다.',
   },
   {
-    id: "bloodthirster",
-    name: "피바라기",
-    category: "공격형",
-    recipe: ["1", "6"], // BF + 망토
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3072.png",
-    stats: [{ label: "공격력", value: "+20%" }, { label: "마법 저항력", value: "+20" }],
-    effect: "피해량의 20%만큼 체력을 회복(모든 피해 흡혈)합니다. 체력이 40% 아래로 떨어지면 5초 동안 최대 체력의 25%에 해당하는 보호막을 얻습니다.",
-    recommendedUnits: ["야스오", "바이", "피오라"],
-    tags: ["#피흡", "#보호막", "#근접_딜러"]
+    id: 'bramble-vest',
+    slug: 'bramble-vest',
+    name: '가시 갑옷',
+    englishName: 'Bramble Vest',
+    category: '방어형',
+    recipe: ['5', '5'],
+    imgUrl: getCompletedImage('bramble-vest'),
+    stats: buildStats({ armor: 50 }),
+    effect:
+      '최대 체력 +6%. 공격으로 받는 피해 5% 감소. 공격받을 때마다 인접한 모든 적에게 100의 마법 피해를 입힙니다. 재사용 대기시간: 2초.',
   },
   {
-    id: "runaans_hurricane",
-    name: "루난의 허리케인",
-    category: "공격형",
-    recipe: ["2", "6"], // 곡궁 + 망토
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3085.png",
-    stats: [{ label: "공격력", value: "+20%" }, { label: "공격속도", value: "+20%" }],
-    effect: "기본 공격 시 주변의 다른 적 한 명에게 탄환을 발사하여 공격력의 50%만큼 물리 피해를 입힙니다.",
-    recommendedUnits: ["아펠리오스", "트위치", "어그로"],
-    tags: ["#멀티_타겟", "#공격속도", "#온히트"]
+    id: 'crownguard',
+    slug: 'crownguard',
+    name: '왕관의 수호자',
+    englishName: 'Crownguard',
+    category: '방어형',
+    recipe: ['3', '5'],
+    imgUrl: getCompletedImage('crownguard'),
+    stats: buildStats({ health: 100, armor: 20, abilityPower: 20 }),
+    effect:
+      '전투 시작 시: 8초 동안 최대 체력의 25%에 해당하는 보호막을 얻습니다. 보호막이 사라지면 주문력 25%를 추가로 획득합니다.',
   },
   {
-    id: "giant_slayer",
-    name: "거인 학살자",
-    category: "공격형",
-    recipe: ["1", "2"], // BF + 곡궁
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3035.png",
-    stats: [{ label: "공격력", value: "+30%" }, { label: "주문력", value: "+10" }, { label: "공격속도", value: "+10%" }],
-    effect: "기본 피해량이 25% 증가합니다. 대상의 최대 체력이 1600을 초과할 경우 피해량 증가 효과가 50%로 대폭 상승합니다.",
-    recommendedUnits: ["징크스", "진", "제이스"],
-    tags: ["#탱커_카운터", "#체력_비례", "#추가_피해"]
+    id: 'deathblade',
+    slug: 'deathblade',
+    name: '죽음의 검',
+    englishName: 'Deathblade',
+    category: '공격형',
+    recipe: ['1', '1'],
+    imgUrl: getCompletedImage('deathblade'),
+    stats: buildStats({ attackDamage: 55 }),
+    effect: '착용자에게 — 그리고 그와 마주하는 모든 것에게 완벽한 평화와 고요를 선사합니다.',
   },
+  {
+    id: 'dragons-claw',
+    slug: 'dragons-claw',
+    name: '용의 발톱',
+    englishName: "Dragon's Claw",
+    category: '방어형',
+    recipe: ['6', '6'],
+    imgUrl: getCompletedImage('dragons-claw'),
+    stats: buildStats({ magicResistance: 60 }),
+    effect: '최대 체력 +6%. 2초마다 최대 체력의 2.5%를 회복합니다.',
+  },
+  {
+    id: 'edge-of-night',
+    slug: 'edge-of-night',
+    name: '밤의 끝자락',
+    englishName: 'Edge of Night',
+    category: '공격형',
+    recipe: ['1', '5'],
+    imgUrl: getCompletedImage('edge-of-night'),
+    stats: buildStats({
+      armor: 20,
+      speed: 15,
+      attackDamage: 10,
+      abilityPower: 10,
+    }),
+    effect:
+      '체력이 60% 이하가 되면 잠시 동안 표적이 되지 않으며, 부정적 효과를 제거하고 잃은 체력의 30%를 회복합니다.',
+  },
+  {
+    id: 'evenshroud',
+    slug: 'evenshroud',
+    name: '균형의 면사포',
+    englishName: 'Evenshroud',
+    category: '방어형',
+    recipe: ['6', '7'],
+    imgUrl: getCompletedImage('evenshroud'),
+    stats: buildStats({ health: 250, magicResistance: 20 }),
+    effect:
+      '주변 2칸 이내의 적에게 30% 균열을 부여합니다. 전투 시작 후 15초 동안 방어력과 마법 저항력 +15. 균열: 방어력 감소.',
+  },
+  {
+    id: 'gargoyle-stoneplate',
+    slug: 'gargoyle-stoneplate',
+    name: '가고일 돌판 갑옷',
+    englishName: 'Gargoyle Stoneplate',
+    category: '방어형',
+    recipe: ['5', '6'],
+    imgUrl: getCompletedImage('gargoyle-stoneplate'),
+    stats: buildStats({ health: 100, armor: 25, magicResistance: 25 }),
+    effect: '착용자를 표적으로 하는 적 1명당 방어력과 마법 저항력 +10.',
+  },
+  {
+    id: 'giant-slayer',
+    slug: 'giant-slayer',
+    name: '거인 학살자',
+    englishName: 'Giant Slayer',
+    category: '공격형',
+    recipe: ['1', '2'],
+    imgUrl: getCompletedImage('giant-slayer'),
+    stats: buildStats({ speed: 15, attackDamage: 15, abilityPower: 15 }),
+    effect: '탱커 대상 피해 증폭 +15%.',
+  },
+  {
+    id: 'guinsoos-rageblade',
+    slug: 'guinsoos-rageblade',
+    name: '구인수의 격노검',
+    englishName: "Guinsoo's Rageblade",
+    category: '공격형',
+    recipe: ['2', '3'],
+    imgUrl: getCompletedImage('guinsoos-rageblade'),
+    stats: buildStats({ speed: 10, abilityPower: 10 }),
+    effect: '1초마다 공격 속도가 7%씩 중첩되어 증가합니다.',
+  },
+  {
+    id: 'hand-of-justice',
+    slug: 'hand-of-justice',
+    name: '정의의 손길',
+    englishName: 'Hand of Justice',
+    category: '공격형',
+    recipe: ['4', '8'],
+    imgUrl: getCompletedImage('hand-of-justice'),
+    stats: buildStats({ dps: 20, mana: 1 }),
+    effect:
+      '두 가지 효과를 얻습니다: 공격력과 주문력 +15%, 모든 피해 흡혈 +12%. 체력이 50% 이상이면 공격력과 주문력이 2배, 50% 미만이면 모든 피해 흡혈이 2배가 됩니다.',
+  },
+  {
+    id: 'hextech-gunblade',
+    slug: 'hextech-gunblade',
+    name: '마법공학 총검',
+    englishName: 'Hextech Gunblade',
+    category: '마법형',
+    recipe: ['1', '3'],
+    imgUrl: getCompletedImage('hextech-gunblade'),
+    stats: buildStats({ attackDamage: 20, abilityPower: 20, mana: 1 }),
+    effect: '입힌 피해의 20%만큼 체력 비율이 가장 낮은 아군의 체력을 회복시킵니다.',
+  },
+  {
+    id: 'infinity-edge',
+    slug: 'infinity-edge',
+    name: '무한의 대검',
+    englishName: 'Infinity Edge',
+    category: '공격형',
+    recipe: ['1', '8'],
+    imgUrl: getCompletedImage('infinity-edge'),
+    stats: buildStats({ attackDamage: 35, dps: 35 }),
+    effect: '정밀 효과를 획득합니다. (스킬에도 치명타가 적용됩니다.)',
+  },
+  {
+    id: 'ionic-spark',
+    slug: 'ionic-spark',
+    name: '이온 충격기',
+    englishName: 'Ionic Spark',
+    category: '방어형',
+    recipe: ['3', '6'],
+    imgUrl: getCompletedImage('ionic-spark'),
+    stats: buildStats({ health: 250, magicResistance: 35, abilityPower: 15 }),
+    effect:
+      '주변 2칸 이내의 적에게 30% 마법 저항력 감소를 부여합니다. 적이 스킬을 시전하면 사용한 마나의 150%에 해당하는 마법 피해를 입힙니다. 약화: 마법 저항력 감소.',
+  },
+  {
+    id: 'jeweled-gauntlet',
+    slug: 'jeweled-gauntlet',
+    name: '보석 건틀릿',
+    englishName: 'Jeweled Gauntlet',
+    category: '마법형',
+    recipe: ['3', '8'],
+    imgUrl: getCompletedImage('jeweled-gauntlet'),
+    stats: buildStats({ abilityPower: 35, dps: 35 }),
+    effect: '정밀 효과를 획득합니다. (스킬에도 치명타가 적용됩니다.)',
+  },
+  {
+    id: 'krakens-fury',
+    slug: 'krakens-fury',
+    name: '크라켄의 분노',
+    englishName: "Kraken's Fury",
+    category: '공격형',
+    recipe: ['2', '6'],
+    imgUrl: getCompletedImage('krakens-fury'),
+    stats: buildStats({ magicResistance: 20, speed: 10, attackDamage: 10 }),
+    effect:
+      '공격 시 공격력이 3.5%씩 중첩되어 증가하며, 최대 15회까지 쌓입니다. 15회 공격 후 공격 속도 +15%.',
+  },
+  {
+    id: 'last-whisper',
+    slug: 'last-whisper',
+    name: '최후의 속삭임',
+    englishName: 'Last Whisper',
+    category: '공격형',
+    recipe: ['2', '8'],
+    imgUrl: getCompletedImage('last-whisper'),
+    stats: buildStats({ speed: 20, attackDamage: 15, dps: 20 }),
+    effect:
+      '공격이나 스킬로 입힌 피해가 3초 동안 대상에게 30% 균열을 부여합니다. 중첩되지 않습니다. 균열: 방어력 감소.',
+  },
+  {
+    id: 'morellonomicon',
+    slug: 'morellonomicon',
+    name: '모렐로노미콘',
+    englishName: 'Morellonomicon',
+    category: '마법형',
+    recipe: ['3', '7'],
+    imgUrl: getCompletedImage('morellonomicon'),
+    stats: buildStats({ health: 150, abilityPower: 20, mana: 1 }),
+    effect:
+      '공격과 스킬이 10초 동안 적을 1% 불태우고 33% 치유 감소를 부여합니다. 불태움: 매초 대상 최대 체력의 일정 비율을 고정 피해로 입힘. 치유 감소: 받는 치유량 감소.',
+  },
+  {
+    id: 'nashors-tooth',
+    slug: 'nashors-tooth',
+    name: '나쇼르의 이빨',
+    englishName: "Nashor's Tooth",
+    category: '마법형',
+    recipe: ['2', '7'],
+    imgUrl: getCompletedImage('nashors-tooth'),
+    stats: buildStats({ health: 150, speed: 10, abilityPower: 15, dps: 20 }),
+    effect: '공격 시 마나를 2 추가로 획득하며, 치명타 적중 시 4로 증가합니다.',
+  },
+  {
+    id: 'protectors-vow',
+    slug: 'protectors-vow',
+    name: '수호자의 맹세',
+    englishName: "Protector's Vow",
+    category: '방어형',
+    recipe: ['4', '5'],
+    imgUrl: getCompletedImage('protectors-vow'),
+    stats: buildStats({ armor: 25, magicResistance: 25, mana: 1 }),
+    effect:
+      '전투 시작 시: 마나 +20. 체력이 40% 이하가 되면 마나 +15와 최대 체력의 20%에 해당하는 보호막을 얻습니다.',
+  },
+  {
+    id: 'quicksilver',
+    slug: 'quicksilver',
+    name: '수은',
+    englishName: 'Quicksilver',
+    category: '공격형',
+    recipe: ['6', '8'],
+    imgUrl: getCompletedImage('quicksilver'),
+    stats: buildStats({ magicResistance: 20, speed: 15, dps: 20 }),
+    effect:
+      '전투 시작 시: 18초 동안 군중 제어 효과 면역을 얻습니다. 1초마다 공격 속도가 3%씩 중첩되어 증가합니다.',
+  },
+  {
+    id: 'rabadons-deathcap',
+    slug: 'rabadons-deathcap',
+    name: '라바돈의 죽음모자',
+    englishName: "Rabadon's Deathcap",
+    category: '마법형',
+    recipe: ['3', '3'],
+    imgUrl: getCompletedImage('rabadons-deathcap'),
+    stats: buildStats({ abilityPower: 55 }),
+    effect: '이 소박한 모자는 세상을 만들거나 무너뜨리도록 도와줍니다.',
+  },
+  {
+    id: 'red-buff',
+    slug: 'red-buff',
+    name: '붉은 파수꾼',
+    englishName: 'Red Buff',
+    category: '공격형',
+    recipe: ['2', '2'],
+    imgUrl: getCompletedImage('red-buff'),
+    stats: buildStats({ speed: 45 }),
+    effect:
+      '공격과 스킬이 5초 동안 적을 1% 불태우고 33% 치유 감소를 부여합니다. 불태움: 매초 대상 최대 체력의 일정 비율을 고정 피해로 입힘. 치유 감소: 받는 치유량 감소.',
+  },
+  {
+    id: 'spear-of-shojin',
+    slug: 'spear-of-shojin',
+    name: '쇼진의 창',
+    englishName: 'Spear of Shojin',
+    category: '마법형',
+    recipe: ['1', '4'],
+    imgUrl: getCompletedImage('spear-of-shojin'),
+    stats: buildStats({ attackDamage: 15, abilityPower: 15, mana: 1 }),
+    effect: '공격 시 마나를 5 추가로 획득합니다.',
+  },
+  {
+    id: 'spirit-visage',
+    slug: 'spirit-visage',
+    name: '정신의 형상',
+    englishName: 'Spirit Visage',
+    category: '방어형',
+    recipe: ['4', '7'],
+    imgUrl: getCompletedImage('spirit-visage'),
+    stats: buildStats({ health: 300, mana: 2 }),
+    effect: '매초 잃은 체력의 2%를 회복합니다.',
+  },
+  {
+    id: 'steadfast-heart',
+    slug: 'steadfast-heart',
+    name: '강인한 심장',
+    englishName: 'Steadfast Heart',
+    category: '방어형',
+    recipe: ['5', '8'],
+    imgUrl: getCompletedImage('steadfast-heart'),
+    stats: buildStats({ health: 250, armor: 20, dps: 20 }),
+    effect: '내구력 +5%. 체력이 50% 이상이면 내구력 +15%로 증가합니다.',
+  },
+  {
+    id: 'steraks-gage',
+    slug: 'steraks-gage',
+    name: '스테락의 도전',
+    englishName: "Sterak's Gage",
+    category: '공격형',
+    recipe: ['1', '7'],
+    imgUrl: getCompletedImage('steraks-gage'),
+    stats: buildStats({ health: 300, attackDamage: 45 }),
+    effect:
+      '체력이 60% 이하가 되면 착용자 최대 체력의 40%에 해당하는 보호막을 얻습니다. 보호막은 4초 동안 빠르게 감소합니다.',
+  },
+  {
+    id: 'strikers-flail',
+    slug: 'strikers-flail',
+    name: '격투가의 도리깨',
+    englishName: "Striker's Flail",
+    category: '공격형',
+    recipe: ['7', '8'],
+    imgUrl: getCompletedImage('strikers-flail'),
+    stats: buildStats({ health: 150, speed: 10, dps: 20 }),
+    effect: '치명타 적중 시 5초 동안 피해 증폭 +5%를 부여합니다. 최대 4회 중첩됩니다.',
+  },
+  {
+    id: 'sunfire-cape',
+    slug: 'sunfire-cape',
+    name: '태양불꽃 망토',
+    englishName: 'Sunfire Cape',
+    category: '방어형',
+    recipe: ['5', '7'],
+    imgUrl: getCompletedImage('sunfire-cape'),
+    stats: buildStats({ health: 150, armor: 20 }),
+    effect:
+      '최대 체력 +8%. 2초마다 주변 2칸 이내의 적 1명을 10초 동안 1% 불태우고 33% 치유 감소를 부여합니다.',
+  },
+  {
+    id: 'tacticians-cape',
+    slug: 'tacticians-cape',
+    name: '전술가의 망토',
+    englishName: "Tactician's Cape",
+    category: '유틸형',
+    recipe: ['9', '10'],
+    imgUrl: getCompletedImage('tacticians-cape'),
+    stats: [],
+    effect:
+      '팀의 최대 인원이 1 증가합니다. 전투 시작 10초 후 10% 확률로 골드 1개를 드롭합니다. "...그리고 약간의 운까지."',
+  },
+  {
+    id: 'tacticians-crown',
+    slug: 'tacticians-crown',
+    name: '전술가의 왕관',
+    englishName: "Tactician's Crown",
+    category: '유틸형',
+    recipe: ['9', '9'],
+    imgUrl: getCompletedImage('tacticians-crown'),
+    stats: [],
+    effect:
+      '팀의 최대 인원이 1 증가합니다. 전투에서 승리할 때 10% 확률로 골드 1개를 드롭합니다. "...영웅의 심장을..."',
+  },
+  {
+    id: 'tacticians-shield',
+    slug: 'tacticians-shield',
+    name: '전술가의 방패',
+    englishName: "Tactician's Shield",
+    category: '유틸형',
+    recipe: ['10', '10'],
+    imgUrl: getCompletedImage('tacticians-shield'),
+    stats: [],
+    effect:
+      '팀의 최대 인원이 1 증가합니다. 착용자가 사망할 때 10% 확률로 골드 1개를 드롭합니다. "철학자의 지혜를 깃들이고..."',
+  },
+  {
+    id: 'thiefs-gloves',
+    slug: 'thiefs-gloves',
+    name: '도둑의 장갑',
+    englishName: "Thief's Gloves",
+    category: '유틸형',
+    recipe: ['8', '8'],
+    imgUrl: getCompletedImage('thiefs-gloves'),
+    stats: [],
+    effect: '매 라운드마다 무작위 아이템 2개를 장착합니다. 아이템 슬롯 3개를 모두 사용합니다.',
+  },
+  {
+    id: 'titans-resolve',
+    slug: 'titans-resolve',
+    name: '타이탄의 결의',
+    englishName: "Titan's Resolve",
+    category: '공격형',
+    recipe: ['2', '5'],
+    imgUrl: getCompletedImage('titans-resolve'),
+    stats: buildStats({ armor: 20, speed: 10 }),
+    effect:
+      '공격하거나 피해를 입을 때마다 공격력과 주문력이 2%씩 증가하며, 최대 25회까지 중첩됩니다. 최대 중첩 시 피해 증폭 +10%와 군중 제어 면역을 얻습니다.',
+  },
+  {
+    id: 'void-staff',
+    slug: 'void-staff',
+    name: '공허의 지팡이',
+    englishName: 'Void Staff',
+    category: '마법형',
+    recipe: [],
+    imgUrl: getCompletedImage('void-staff'),
+    stats: buildStats({ speed: 15, abilityPower: 35, mana: 1 }),
+    effect:
+      '공격이나 스킬로 입힌 피해가 5초 동안 대상에게 30% 마법 저항력 감소를 부여합니다. 중첩되지 않습니다. 약화: 마법 저항력 감소.',
+  },
+  {
+    id: 'warmogs-armor',
+    slug: 'warmogs-armor',
+    name: '워모그의 갑옷',
+    englishName: "Warmog's Armor",
+    category: '방어형',
+    recipe: ['7', '7'],
+    imgUrl: getCompletedImage('warmogs-armor'),
+    stats: buildStats({ health: 500 }),
+    effect: '최대 체력 +18%.',
+  },
+]
 
-  // === 방어형 (Defensive) - 7 Items ===
-  {
-    id: "warmogs_armor",
-    name: "워모그의 갑옷",
-    category: "방어형",
-    recipe: ["7", "7"], // 허리띠 + 허리띠
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3083.png",
-    stats: [{ label: "체력", value: "+500" }],
-    effect: "착용자의 최대 체력을 엄청나게 증가시킵니다. 게임 초반 빌드업과 탱커 라인의 뼈대를 잡는 데 가장 유용합니다.",
-    recommendedUnits: ["블리츠크랭크", "레오나", "뽀삐"],
-    tags: ["#깡체력", "#초반_빌드업", "#메인_탱커"]
-  },
-  {
-    id: "bramble_vest",
-    name: "가시 갑옷",
-    category: "방어형",
-    recipe: ["5", "5"], // 조끼 + 조끼
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3075.png",
-    stats: [{ label: "방어력", value: "+75" }],
-    effect: "받는 치명타 추가 피해를 무효화합니다. 기본 공격을 받으면 주변 적에게 4초마다 마법 피해를 입힙니다.",
-    recommendedUnits: ["갈리오", "알리스타", "신 짜오"],
-    tags: ["#방어력", "#치명타_무효", "#반사_피해"]
-  },
-  {
-    id: "dragons_claw",
-    name: "용의 발톱",
-    category: "방어형",
-    recipe: ["6", "6"], // 망토 + 망토
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3155.png",
-    stats: [{ label: "마법 저항력", value: "+65" }],
-    effect: "2초마다 최대 체력의 5%만큼 체력을 회복합니다. 마법 피해 중심의 AP 덱을 상대로 무지막지한 탱킹력을 자랑합니다.",
-    recommendedUnits: ["레오나", "뽀삐", "세주아니"],
-    tags: ["#마법_저항력", "#초당_재생", "#AP_카운터"]
-  },
-  {
-    id: "sunfire_cape",
-    name: "태양불꽃 망토",
-    category: "방어형",
-    recipe: ["5", "7"], // 조끼 + 허리띠
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3068.png",
-    stats: [{ label: "방어력", value: "+20" }, { label: "체력", value: "+150" }],
-    effect: "2초마다 2칸 이내에 있는 적 한 명을 불태워 10초 동안 대상 최대 체력의 10%만큼 고정 피해를 입히고 회복량을 33% 감소시킵니다.",
-    recommendedUnits: ["바이", "에코", "사일러스"],
-    tags: ["#치유_감소", "#초반_트럭", "#고정_피해"]
-  },
-  {
-    id: "gargoyle_stoneplate",
-    name: "가고일 돌판갑옷",
-    category: "방어형",
-    recipe: ["5", "6"], // 조끼 + 망토
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3094.png",
-    stats: [{ label: "방어력", value: "+30" }, { label: "마법 저항력", value: "+30" }],
-    effect: "자신을 타겟팅하는 적 한 명당 방어력과 마법 저항력이 +10씩 증가합니다. 원톱 단독 탱커 배치 시 효율이 극대화됩니다.",
-    recommendedUnits: ["싱드", "아무무", "세주아니"],
-    tags: ["#단독_탱킹", "#방마저_증가", "#메인_방템"]
-  },
-  {
-    id: "titans_resolve",
-    name: "타이탄의 결의",
-    category: "방어형",
-    recipe: ["5", "2"], // 조끼 + 곡궁
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3153.png",
-    stats: [{ label: "방어력", value: "+20" }, { label: "공격속도", value: "+10%" }],
-    effect: "공격을 받거나 입힐 때마다 공격력과 주문력이 2%씩 늘어납니다. 최대 중첩 시 방어력과 마법 저항력이 25 증가합니다.",
-    recommendedUnits: ["야스오", "바이", "볼리베어"],
-    tags: ["#브루저_필수", "#스택형", "#하이브리드"]
-  },
-  {
-    id: "steadfast_heart",
-    name: "강인한 심장",
-    category: "방어형",
-    recipe: ["7", "6"], // 허리띠 + 망토
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3001.png",
-    stats: [{ label: "체력", value: "+200" }, { label: "방어력", value: "+20" }, { label: "치명타 확률", value: "+15%" }],
-    effect: "받는 모든 피해량이 8% 감소합니다. 체력이 50% 이상일 때는 피해량 감소 효과가 15%로 증가합니다.",
-    recommendedUnits: ["쓰레쉬", "요릭", "일라오이"],
-    tags: ["#피해_감소", "#체력_비례_탱킹", "#신규_탱템"]
-  },
-
-  // === 마법형 (Magical) - 7 Items ===
-  {
-    id: "rabadons_deathcap",
-    name: "라바돈의 죽음모자",
-    category: "마법형",
-    recipe: ["3", "3"], // 지팡이 + 지팡이
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3089.png",
-    stats: [{ label: "주문력", value: "+70" }],
-    effect: "압도적인 순수 주문력을 제공합니다. 스킬 한 방 한 방의 파괴력이 중요한 순수 메인 AP 누커형 챔피언에게 완벽한 아이템입니다.",
-    recommendedUnits: ["럭스", "아리", "빅터"],
-    tags: ["#순수_AP", "#폭발적_데미지", "#주문력"]
-  },
-  {
-    id: "blue_buff",
-    name: "푸른 파수꾼 (블루)",
-    category: "마법형",
-    recipe: ["4", "4"], // 눈물 + 눈물
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3040.png",
-    stats: [{ label: "주문력", value: "+10" }, { label: "시작 마나", value: "+40" }],
-    effect: "최대 마나가 10 감소합니다. 착용자가 스킬을 시전한 후 3초 이내에 처치 관여 시 8초 동안 피해량이 8% 증가합니다.",
-    recommendedUnits: ["이즈리얼", "신드라", "조이"],
-    tags: ["#마나_순환", "#스킬_난사", "#저마나_챔피언"]
-  },
-  {
-    id: "morellonomicon",
-    name: "모렐로노미콘",
-    category: "마법형",
-    recipe: ["3", "7"], // 지팡이 + 허리띠
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3165.png",
-    stats: [{ label: "주문력", value: "+25" }, { label: "체력", value: "+150" }],
-    effect: "스킬로 마법 피해를 입히면 대상을 불태워 10초 동안 최대 체력의 10%만큼 고정 피해를 입히고 치유량을 33% 감소시킵니다.",
-    recommendedUnits: ["모르가나", "트위스티드 페이트", "에코"],
-    tags: ["#광역_치유감소", "#고정_피해", "#디버프"]
-  },
-  {
-    id: "archangels_staff",
-    name: "대천사의 지팡이",
-    category: "마법형",
-    recipe: ["3", "4"], // 지팡이 + 눈물
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3003.png",
-    stats: [{ label: "주문력", value: "+20" }, { label: "마나", value: "+15" }],
-    effect: "전투가 시작되면 5초마다 주문력이 20씩 상승합니다. 탱커 라인이 든든하여 전투가 길어질수록 화력이 무한대로 강력해집니다.",
-    recommendedUnits: ["라이즈", "소나", "티모"],
-    tags: ["#시간비례_성장", "#장기전_특화", "#AP_지속딜"]
-  },
-  {
-    id: "spear_of_shojin",
-    name: "쇼진의 창",
-    category: "마법형",
-    recipe: ["1", "4"], // BF + 눈물
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3124.png",
-    stats: [{ label: "공격력", value: "+15" }, { label: "주문력", value: "+15" }, { label: "마나", value: "+15" }],
-    effect: "기본 공격 시 5의 마나를 추가로 획득합니다. 스킬 마나통이 크거나 유틸 스킬을 자주 굴려야 하는 챔피언에게 필수적입니다.",
-    recommendedUnits: ["소라카", "밀리오", "카르마"],
-    tags: ["#평타당_마나", "#고마나_챔피언", "#스킬_순환"]
-  },
-  {
-    id: "hextech_gunblade",
-    name: "마법공학 총검",
-    category: "마법형",
-    recipe: ["1", "3"], // BF + 지팡이
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3146.png",
-    stats: [{ label: "공격력", value: "+10%" }, { label: "주문력", value: "+25" }],
-    effect: "모든 피해 흡혈 20%를 얻습니다. 추가로 자신이 입힌 피해량에 비례해 아군 중 체력이 가장 낮은 기물의 체력을 치유합니다.",
-    recommendedUnits: ["카타리나", "피들스틱", "스웨인"],
-    tags: ["#하이브리드_흡혈", "#아군_케어", "#생존력"]
-  },
-  {
-    id: "jeweled_gauntlet",
-    name: "보석 건틀릿",
-    category: "마법형",
-    recipe: ["3", "8"], // 지팡이 + 장갑
-    imgUrl: "https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/3157.png",
-    stats: [{ label: "주문력", value: "+30" }, { label: "치명타 확률", value: "+15%" }],
-    effect: "마법 및 고정 피해 스킬에 치명타가 적용될 수 있습니다. 주문력 기반 덱에서 대미지의 폭발력을 극한으로 올릴 때 탑재합니다.",
-    recommendedUnits: ["럭스", "신드라", "벡스"],
-    tags: ["#AP_치명타", "#스킬_폭딜", "#누커"]
-  }
-];
-
+// ==========================================
+// 4. 카테고리 필터
+// ==========================================
 export const CATEGORY_FILTERS = [
   { id: 'all', label: '전체' },
   { id: '공격형', label: '공격형' },
   { id: '방어형', label: '방어형' },
   { id: '마법형', label: '마법형' },
-];
+  { id: '유틸형', label: '유틸형' },
+]

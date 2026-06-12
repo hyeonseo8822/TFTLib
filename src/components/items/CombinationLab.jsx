@@ -1,15 +1,27 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { COMPLETED_ITEMS, MATERIAL_ITEMS } from '../../data/items'
 import { Icon } from '../common/Icon'
 
-function SlotBox({ item, onClick, label }) {
+function findCombination(slot1, slot2) {
+  if (!slot1 || !slot2) return null
+  return COMPLETED_ITEMS.find((item) => {
+    if (!Array.isArray(item.recipe) || item.recipe.length !== 2) return false
+    const [a, b] = item.recipe
+    return (
+      (a === slot1.id && b === slot2.id) ||
+      (a === slot2.id && b === slot1.id)
+    )
+  })
+}
+
+function MaterialSlot({ item, label, onClear }) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={onClear}
       title={item ? `${item.name} 제거` : label}
       className={[
-        'relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl border-2 flex flex-col items-center justify-center transition-all focus:outline-none',
+        'relative w-24 h-28 sm:w-28 sm:h-32 rounded-xl border-2 flex flex-col items-center justify-center transition-all focus:outline-none px-1',
         item
           ? 'border-primary bg-surface shadow-md hover:brightness-95 cursor-pointer'
           : 'border-dashed border-outline bg-white/60 cursor-default',
@@ -17,9 +29,16 @@ function SlotBox({ item, onClick, label }) {
     >
       {item ? (
         <>
-          <img src={item.imgUrl} alt={item.name} className="w-10 h-10 sm:w-12 sm:h-12 object-contain" />
-          <span className="text-[9px] mt-1 text-primary font-bold leading-tight max-w-[72px] truncate px-1">
+          <img
+            src={item.imgUrl}
+            alt={item.name}
+            className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
+          />
+          <span className="text-[10px] mt-1 text-primary font-bold leading-tight text-center max-w-full truncate w-full px-1">
             {item.name}
+          </span>
+          <span className="text-[9px] mt-0.5 text-on-surface-variant leading-tight text-center max-w-full truncate w-full px-1">
+            {item.description}
           </span>
           <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-outline-variant text-on-surface-variant flex items-center justify-center">
             <Icon name="close" className="text-[12px]" />
@@ -35,7 +54,7 @@ function SlotBox({ item, onClick, label }) {
   )
 }
 
-function ResultSlot({ result, noMatch }) {
+function ResultCard({ result, noMatch }) {
   if (noMatch) {
     return (
       <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border-4 border-error bg-error-container flex flex-col items-center justify-center shadow-xl gap-1">
@@ -47,11 +66,28 @@ function ResultSlot({ result, noMatch }) {
 
   if (result) {
     return (
-      <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border-4 border-primary bg-primary-container flex flex-col items-center justify-center shadow-xl gap-1">
-        <img src={result.imgUrl} alt={result.name} className="w-12 h-12 sm:w-14 sm:h-14 object-contain" />
-        <span className="text-[10px] font-bold text-primary text-center leading-tight max-w-[96px] px-1 truncate">
+      <div className="relative w-32 sm:w-36 rounded-2xl border-4 border-primary bg-surface flex flex-col items-center shadow-xl p-2 gap-1">
+        <img
+          src={result.imgUrl}
+          alt={result.name}
+          className="w-12 h-12 sm:w-14 sm:h-14 object-contain"
+        />
+        <span className="text-[11px] font-bold text-secondary text-center leading-tight w-full px-1 truncate">
           {result.name}
         </span>
+        {result.stats?.length > 0 && (
+          <ul className="w-full flex flex-col gap-0.5 mt-1">
+            {result.stats.map((stat) => (
+              <li
+                key={stat.label}
+                className="flex items-center justify-between text-[9px] leading-tight px-1"
+              >
+                <span className="text-on-surface-variant truncate">{stat.label}</span>
+                <span className="font-bold text-primary ml-1 shrink-0">{stat.value}</span>
+              </li>
+            ))}
+          </ul>
+        )}
         <div className="absolute -top-3 -right-3 bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">
           완성!
         </div>
@@ -70,55 +106,43 @@ function ResultSlot({ result, noMatch }) {
 export function CombinationLab({ onItemSelect }) {
   const [slot1, setSlot1] = useState(null)
   const [slot2, setSlot2] = useState(null)
-  const [result, setResult] = useState(null)
-  const [noMatch, setNoMatch] = useState(false)
+
+  const result = findCombination(slot1, slot2)
+  const noMatch = !!slot1 && !!slot2 && !result
+
+  useEffect(() => {
+    if (result) {
+      onItemSelect?.(result)
+    }
+  }, [result, onItemSelect])
 
   function handleMaterialClick(mat) {
     if (!slot1) {
       setSlot1(mat)
-      setResult(null)
-      setNoMatch(false)
-    } else if (!slot2) {
-      if (slot1.id === mat.id) {
-        setSlot2(mat)
-      } else {
-        setSlot2(mat)
-      }
-      setResult(null)
-      setNoMatch(false)
+      return
     }
-    // both slots filled — do nothing; user must clear a slot first
-  }
-
-  function handleCombine() {
-    if (!slot1 || !slot2) return
-
-    const matched = COMPLETED_ITEMS.find((item) => {
-      const [a, b] = item.recipe
-      return (
-        (a === slot1.id && b === slot2.id) ||
-        (a === slot2.id && b === slot1.id)
-      )
-    })
-
-    if (matched) {
-      setResult(matched)
-      setNoMatch(false)
-      onItemSelect(matched)
-    } else {
-      setResult(null)
-      setNoMatch(true)
+    if (!slot2) {
+      setSlot2(mat)
+      return
     }
+    // 두 슬롯이 모두 차 있으면, 새 재료로 다시 시작합니다.
+    setSlot1(mat)
+    setSlot2(null)
   }
 
   function handleReset() {
     setSlot1(null)
     setSlot2(null)
-    setResult(null)
-    setNoMatch(false)
   }
 
-  const canCombine = !!slot1 && !!slot2
+  function handleClearSlot1() {
+    setSlot1(slot2)
+    setSlot2(null)
+  }
+
+  function handleClearSlot2() {
+    setSlot2(null)
+  }
 
   return (
     <section className="bg-surface-container border border-outline-variant rounded-lg overflow-hidden">
@@ -140,29 +164,26 @@ export function CombinationLab({ onItemSelect }) {
 
       {/* Material grid */}
       <div className="px-md pb-md">
-        <p className="text-label-md text-on-surface-variant mb-sm">재료 선택 (슬롯에 차례로 배치)</p>
-        <div className="grid grid-cols-5 sm:grid-cols-9 gap-xs sm:gap-sm">
+        <p className="text-label-md text-on-surface-variant mb-sm">
+          재료 선택 — 두 개를 고르면 자동으로 조합됩니다
+        </p>
+        <div className="grid grid-cols-5 sm:grid-cols-10 gap-xs sm:gap-sm">
           {MATERIAL_ITEMS.map((mat) => {
             const inSlot1 = slot1?.id === mat.id
-            const inSlot2 = slot2?.id === mat.id && slot1?.id !== slot2?.id
-            const bothFilled = !!slot1 && !!slot2
-            const isDisabled = bothFilled && !inSlot1 && !inSlot2
+            const inSlot2 = slot2?.id === mat.id
 
             return (
               <button
                 key={mat.id}
                 type="button"
                 onClick={() => handleMaterialClick(mat)}
-                disabled={isDisabled}
-                title={mat.name}
-                aria-label={mat.name}
+                title={`${mat.name} (${mat.description})`}
+                aria-label={`${mat.name} ${mat.description}`}
                 className={[
-                  'aspect-square rounded-lg border transition-all flex items-center justify-center group',
-                  isDisabled
-                    ? 'opacity-30 cursor-not-allowed border-outline-variant bg-surface'
-                    : inSlot1 || inSlot2
-                    ? 'border-primary bg-surface ring-2 ring-primary/30 cursor-pointer'
-                    : 'border-outline-variant bg-surface hover:border-primary cursor-pointer hover:scale-105',
+                  'aspect-square rounded-lg border transition-all flex items-center justify-center group cursor-pointer',
+                  inSlot1 || inSlot2
+                    ? 'border-primary bg-surface ring-2 ring-primary/30'
+                    : 'border-outline-variant bg-surface hover:border-primary hover:scale-105',
                 ].join(' ')}
               >
                 <img
@@ -181,46 +202,18 @@ export function CombinationLab({ onItemSelect }) {
 
       {/* Crafting row */}
       <div className="px-md py-md flex flex-col sm:flex-row items-center justify-center gap-md sm:gap-lg">
-        <SlotBox
-          item={slot1}
-          label="재료 1"
-          onClick={() => { setSlot1(null); setResult(null); setNoMatch(false) }}
-        />
+        <MaterialSlot item={slot1} label="재료 1" onClear={handleClearSlot1} />
 
-        <div className="flex flex-col items-center gap-xs">
-          <Icon name="add" className="text-on-surface-variant text-[28px]" />
-        </div>
+        <Icon name="add" className="text-on-surface-variant text-[28px]" />
 
-        <SlotBox
-          item={slot2}
-          label="재료 2"
-          onClick={() => { setSlot2(null); setResult(null); setNoMatch(false) }}
-        />
+        <MaterialSlot item={slot2} label="재료 2" onClear={handleClearSlot2} />
 
         <Icon
           name="arrow_forward"
           className="text-primary text-[28px] rotate-90 sm:rotate-0"
         />
 
-        <ResultSlot result={result} noMatch={noMatch} />
-      </div>
-
-      {/* Combine button */}
-      <div className="px-md pb-md flex justify-center">
-        <button
-          type="button"
-          onClick={handleCombine}
-          disabled={!canCombine}
-          className={[
-            'flex items-center gap-2 px-xl py-3 rounded-full font-label-md transition-all',
-            canCombine
-              ? 'bg-primary text-white hover:bg-primary/90 active:scale-95 cursor-pointer'
-              : 'bg-surface-container-high text-on-surface-variant cursor-not-allowed opacity-60',
-          ].join(' ')}
-        >
-          <Icon name="auto_fix_high" />
-          조합하기
-        </button>
+        <ResultCard result={result} noMatch={noMatch} />
       </div>
     </section>
   )
