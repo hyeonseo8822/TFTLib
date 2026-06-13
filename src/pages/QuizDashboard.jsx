@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Footer } from '../components/layout/Footer'
 import { TopAppBar } from '../components/layout/TopAppBar'
 
@@ -253,15 +254,24 @@ const RANKS = [
   'CHALLENGER',
 ]
 
-function createQuestionSet() {
-  const pool = [...QUESTIONS]
-  for (let i = pool.length - 1; i > 0; i -= 1) {
+function shuffleList(items) {
+  const shuffled = [...items]
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1))
-    const current = pool[i]
-    pool[i] = pool[j]
-    pool[j] = current
+    const current = shuffled[i]
+    shuffled[i] = shuffled[j]
+    shuffled[j] = current
   }
-  return pool.slice(0, Math.min(TOTAL_STEPS, pool.length))
+  return shuffled
+}
+
+function createQuestionSet() {
+  return shuffleList(QUESTIONS)
+    .slice(0, Math.min(TOTAL_STEPS, QUESTIONS.length))
+    .map((question) => ({
+      ...question,
+      options: shuffleList(question.options),
+    }))
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -397,7 +407,7 @@ function QuizFeedback({ isCorrect, onNext }) {
   )
 }
 
-function QuizResult({ score, total, onReset }) {
+function QuizResult({ score, total, onReset, onOpenNotes }) {
   const rank = RANKS[Math.min(score, RANKS.length - 1)]
   const accuracy = total > 0 ? Math.round((score / total) * 100) : 0
 
@@ -448,7 +458,10 @@ function QuizResult({ score, total, onReset }) {
         >
           다시 도전
         </button>
-        <button className="flex-1 py-md bg-primary text-on-primary font-label-md text-label-md rounded-lg hover:bg-primary-container transition-all">
+        <button
+          onClick={onOpenNotes}
+          className="flex-1 py-md bg-primary text-on-primary font-label-md text-label-md rounded-lg hover:bg-primary-container transition-all"
+        >
           노트 확인하기
         </button>
       </div>
@@ -459,6 +472,7 @@ function QuizResult({ score, total, onReset }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function QuizDashboard() {
+  const navigate = useNavigate()
   const [gameStatus, setGameStatus] = useState('welcome') // 'welcome' | 'playing' | 'results'
   const [sessionQuestions, setSessionQuestions] = useState(() => createQuestionSet())
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -496,6 +510,10 @@ export default function QuizDashboard() {
     setCurrentIndex(0)
     setScore(0)
     setFeedback(null)
+  }
+
+  function handleOpenNotes() {
+    navigate('/positioning')
   }
 
   return (
@@ -585,7 +603,12 @@ export default function QuizDashboard() {
 
           {/* ── Results screen ── */}
           {gameStatus === 'results' && (
-            <QuizResult score={score} total={sessionQuestions.length} onReset={handleReset} />
+            <QuizResult
+              score={score}
+              total={sessionQuestions.length}
+              onReset={handleReset}
+              onOpenNotes={handleOpenNotes}
+            />
           )}
         </div>
       </main>
