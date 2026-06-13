@@ -4,16 +4,70 @@ import { TopAppBar } from '../components/layout/TopAppBar'
 
 // ─── Static quiz data ────────────────────────────────────────────────────────
 
+const championImages = import.meta.glob('../assets/champions/*.png', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+})
+
+function championImage(slug) {
+  return championImages[`../assets/champions/${slug}.png`]
+}
+
 const QUESTIONS = [
   {
     type: 'synergy',
     label: 'SYNERGY MASTERY',
-    question: "다음 중 '전사' 시너지를 가진 챔피언은?",
+    question: "다음 중 '보루' 시너지를 가진 챔피언은?",
     options: [
-      { name: '아트록스', correct: true,  img: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&q=80&w=200' },
-      { name: '럭스',    correct: false, img: 'https://images.unsplash.com/photo-1635805737707-575885ab0820?auto=format&fit=crop&q=80&w=200' },
-      { name: '신드라',  correct: false, img: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=200' },
-      { name: '애쉬',    correct: false, img: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=200' },
+      { name: '아트록스', correct: true, img: championImage('aatrox') },
+      { name: '아칼리', correct: false, img: championImage('akali') },
+      { name: '케이틀린', correct: false, img: championImage('caitlyn') },
+      { name: '진', correct: false, img: championImage('jhin') },
+    ],
+  },
+  {
+    type: 'synergy',
+    label: 'SYNERGY MASTERY',
+    question: "다음 중 '저격수' 시너지를 가진 챔피언은?",
+    options: [
+      { name: '진', correct: true, img: championImage('jhin') },
+      { name: '피오라', correct: false, img: championImage('fiora') },
+      { name: '잭스', correct: false, img: championImage('jax') },
+      { name: '모르가나', correct: false, img: championImage('morgana') },
+    ],
+  },
+  {
+    type: 'synergy',
+    label: 'SYNERGY MASTERY',
+    question: "다음 중 '격투가' 시너지를 가진 챔피언은?",
+    options: [
+      { name: '초가스', correct: true, img: championImage('chogath') },
+      { name: '자야', correct: false, img: championImage('xayah') },
+      { name: '벡스', correct: false, img: championImage('vex') },
+      { name: '오로라', correct: false, img: championImage('aurora') },
+    ],
+  },
+  {
+    type: 'synergy',
+    label: 'SYNERGY MASTERY',
+    question: "다음 중 '사이오닉' 시너지를 가진 챔피언은?",
+    options: [
+      { name: '마스터 이', correct: true, img: championImage('masteryi') },
+      { name: '나르', correct: false, img: championImage('gnar') },
+      { name: '징크스', correct: false, img: championImage('jinx') },
+      { name: '코르키', correct: false, img: championImage('corki') },
+    ],
+  },
+  {
+    type: 'synergy',
+    label: 'SYNERGY MASTERY',
+    question: "다음 중 '선봉대' 시너지를 가진 챔피언은?",
+    options: [
+      { name: '블리츠크랭크', correct: true, img: championImage('blitzcrank') },
+      { name: '카이사', correct: false, img: championImage('kaisa') },
+      { name: '제드', correct: false, img: championImage('zed') },
+      { name: '그레이브즈', correct: false, img: championImage('graves') },
     ],
   },
   {
@@ -21,28 +75,194 @@ const QUESTIONS = [
     label: 'ITEM CRAFTING',
     question: "'구인수의 격노검'을 만들기 위해 필요한 조합 아이템은?",
     options: [
-      { name: '곡궁 + 지팡이', correct: true  },
-      { name: 'B.F + 지팡이', correct: false },
-      { name: '곡궁 + 장갑',  correct: false },
-      { name: '벨트 + 지팡이', correct: false },
+      { name: '곡궁 + 쓸데없이 큰 지팡이', correct: true },
+      { name: 'B.F. 대검 + 쓸데없이 큰 지팡이', correct: false },
+      { name: '곡궁 + 연습용 장갑', correct: false },
+      { name: '거인의 허리띠 + 쓸데없이 큰 지팡이', correct: false },
+    ],
+  },
+  {
+    type: 'item',
+    label: 'ITEM CRAFTING',
+    question: "'쇼진의 창'을 만들기 위해 필요한 조합 아이템은?",
+    options: [
+      { name: 'B.F. 대검 + 여신의 눈물', correct: true },
+      { name: '곡궁 + 여신의 눈물', correct: false },
+      { name: 'B.F. 대검 + 음전자 망토', correct: false },
+      { name: '쇠사슬 조끼 + 여신의 눈물', correct: false },
+    ],
+  },
+  {
+    type: 'item',
+    label: 'ITEM CRAFTING',
+    question: "'푸른 파수꾼'을 만들기 위해 필요한 조합 아이템은?",
+    options: [
+      { name: '여신의 눈물 + 여신의 눈물', correct: true },
+      { name: '쓸데없이 큰 지팡이 + 여신의 눈물', correct: false },
+      { name: '음전자 망토 + 여신의 눈물', correct: false },
+      { name: '연습용 장갑 + 여신의 눈물', correct: false },
+    ],
+  },
+  {
+    type: 'item',
+    label: 'ITEM CRAFTING',
+    question: "'대천사의 지팡이'를 만들기 위해 필요한 조합 아이템은?",
+    options: [
+      { name: '쓸데없이 큰 지팡이 + 여신의 눈물', correct: true },
+      { name: '쓸데없이 큰 지팡이 + 쓸데없이 큰 지팡이', correct: false },
+      { name: 'B.F. 대검 + 여신의 눈물', correct: false },
+      { name: '쇠사슬 조끼 + 음전자 망토', correct: false },
+    ],
+  },
+  {
+    type: 'item',
+    label: 'ITEM CRAFTING',
+    question: "'가시 갑옷'을 만들기 위해 필요한 조합 아이템은?",
+    options: [
+      { name: '쇠사슬 조끼 + 쇠사슬 조끼', correct: true },
+      { name: '쇠사슬 조끼 + 음전자 망토', correct: false },
+      { name: '거인의 허리띠 + 쇠사슬 조끼', correct: false },
+      { name: '연습용 장갑 + 쇠사슬 조끼', correct: false },
+    ],
+  },
+  {
+    type: 'item',
+    label: 'ITEM CRAFTING',
+    question: "'이온 충격기'를 만들기 위해 필요한 조합 아이템은?",
+    options: [
+      { name: '쓸데없이 큰 지팡이 + 음전자 망토', correct: true },
+      { name: 'B.F. 대검 + 음전자 망토', correct: false },
+      { name: '곡궁 + 음전자 망토', correct: false },
+      { name: '쇠사슬 조끼 + 음전자 망토', correct: false },
+    ],
+  },
+  {
+    type: 'item',
+    label: 'ITEM CRAFTING',
+    question: "'무한의 대검'을 만들기 위해 필요한 조합 아이템은?",
+    options: [
+      { name: 'B.F. 대검 + 연습용 장갑', correct: true },
+      { name: 'B.F. 대검 + B.F. 대검', correct: false },
+      { name: '곡궁 + 연습용 장갑', correct: false },
+      { name: '쓸데없이 큰 지팡이 + 연습용 장갑', correct: false },
+    ],
+  },
+  {
+    type: 'item',
+    label: 'ITEM CRAFTING',
+    question: "'워모그의 갑옷'을 만들기 위해 필요한 조합 아이템은?",
+    options: [
+      { name: '거인의 허리띠 + 거인의 허리띠', correct: true },
+      { name: '거인의 허리띠 + 쇠사슬 조끼', correct: false },
+      { name: '거인의 허리띠 + 음전자 망토', correct: false },
+      { name: '거인의 허리띠 + 연습용 장갑', correct: false },
     ],
   },
   {
     type: 'augment',
     label: 'AUGMENT CHOICE',
-    question: "설명에 맞는 증강체는?: '아군 유닛이 처치될 때마다 남은 아군이 체력을 회복합니다.'",
+    question: "설명에 맞는 증강체는?: '현재 및 최대 플레이어 체력이 20 증가합니다.'",
     options: [
-      { name: '사이버네틱 외피', correct: false },
-      { name: '임시변통 방어구', correct: false },
-      { name: '천상의 축복',    correct: true  },
-      { name: '재생의 바람',    correct: false },
+      { name: '꼬마 거인', correct: true },
+      { name: '후반 전문가', correct: false },
+      { name: '신병', correct: false },
+      { name: '보석 연꽃 II', correct: false },
+    ],
+  },
+  {
+    type: 'augment',
+    label: 'AUGMENT CHOICE',
+    question: "설명에 맞는 증강체는?: '라운드 시작 시 대기석의 아이템이 무작위로 변합니다.'",
+    options: [
+      { name: '판도라의 아이템', correct: true },
+      { name: '휴대용 대장간', correct: false },
+      { name: '간이 대장간', correct: false },
+      { name: '도둑 무리', correct: false },
+    ],
+  },
+  {
+    type: 'augment',
+    label: 'AUGMENT CHOICE',
+    question: "설명에 맞는 증강체는?: '대기석에 챔피언이 없다면 플레이어 대상 전투 종료 시 경험치를 얻습니다.'",
+    options: [
+      { name: '맑은 정신', correct: true },
+      { name: '레벨 업!', correct: false },
+      { name: '새로고침의 날 I', correct: false },
+      { name: '후반 전문가', correct: false },
+    ],
+  },
+  {
+    type: 'augment',
+    label: 'AUGMENT CHOICE',
+    question: "설명에 맞는 증강체는?: '유물 4개 중 하나를 선택합니다.'",
+    options: [
+      { name: '휴대용 대장간', correct: true },
+      { name: '아이템 꾸러미', correct: false },
+      { name: '판도라의 아이템', correct: false },
+      { name: '꼬마 거인', correct: false },
+    ],
+  },
+  {
+    type: 'augment',
+    label: 'AUGMENT CHOICE',
+    question: "설명에 맞는 증강체는?: '경험치를 구매하면 추가 경험치를 얻고, 즉시 경험치를 얻습니다.'",
+    options: [
+      { name: '레벨 업!', correct: true },
+      { name: '맑은 정신', correct: false },
+      { name: '성취', correct: false },
+      { name: '생일 선물', correct: false },
+    ],
+  },
+  {
+    type: 'augment',
+    label: 'AUGMENT CHOICE',
+    question: "설명에 맞는 증강체는?: '아군이 치명타 확률, 치명타 피해량, 정밀을 얻습니다.'",
+    options: [
+      { name: '보석 연꽃 II', correct: true },
+      { name: '무차별적 살인자', correct: false },
+      { name: '단결된 의지', correct: false },
+      { name: '거대하고 강력한', correct: false },
+    ],
+  },
+  {
+    type: 'augment',
+    label: 'AUGMENT CHOICE',
+    question: "설명에 맞는 증강체는?: '최대 팀 규모가 +1 증가하고 4단계 챔피언을 획득합니다.'",
+    options: [
+      { name: '신병', correct: true },
+      { name: '레벨 업!', correct: false },
+      { name: '삼인방 II', correct: false },
+      { name: '성취', correct: false },
     ],
   },
 ]
 
-const TOTAL_STEPS = 5
+const TOTAL_STEPS = 10
 
-const RANKS = ['IRON', 'SILVER', 'GOLD', 'PLATINUM', 'CHALLENGER']
+const RANKS = [
+  'IRON',
+  'IRON',
+  'IRON',
+  'SILVER',
+  'SILVER',
+  'GOLD',
+  'GOLD',
+  'PLATINUM',
+  'PLATINUM',
+  'CHALLENGER',
+  'CHALLENGER',
+]
+
+function createQuestionSet() {
+  const pool = [...QUESTIONS]
+  for (let i = pool.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const current = pool[i]
+    pool[i] = pool[j]
+    pool[j] = current
+  }
+  return pool.slice(0, Math.min(TOTAL_STEPS, pool.length))
+}
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -240,13 +460,15 @@ function QuizResult({ score, total, onReset }) {
 
 export default function QuizDashboard() {
   const [gameStatus, setGameStatus] = useState('welcome') // 'welcome' | 'playing' | 'results'
+  const [sessionQuestions, setSessionQuestions] = useState(() => createQuestionSet())
   const [currentIndex, setCurrentIndex] = useState(0)
   const [score, setScore] = useState(0)
   const [feedback, setFeedback] = useState(null) // null | { isCorrect: boolean }
 
-  const question = QUESTIONS[currentIndex % QUESTIONS.length]
+  const question = sessionQuestions[currentIndex]
 
   function handleStart() {
+    setSessionQuestions(createQuestionSet())
     setGameStatus('playing')
     setCurrentIndex(0)
     setScore(0)
@@ -261,7 +483,7 @@ export default function QuizDashboard() {
 
   function handleNext() {
     const nextIndex = currentIndex + 1
-    if (nextIndex >= TOTAL_STEPS) {
+    if (nextIndex >= sessionQuestions.length) {
       setGameStatus('results')
     } else {
       setCurrentIndex(nextIndex)
@@ -324,7 +546,7 @@ export default function QuizDashboard() {
             <div className="space-y-lg">
               <QuizProgress
                 currentIndex={currentIndex + 1}
-                total={TOTAL_STEPS}
+                total={sessionQuestions.length}
                 label={question.label}
               />
 
@@ -363,7 +585,7 @@ export default function QuizDashboard() {
 
           {/* ── Results screen ── */}
           {gameStatus === 'results' && (
-            <QuizResult score={score} total={TOTAL_STEPS} onReset={handleReset} />
+            <QuizResult score={score} total={sessionQuestions.length} onReset={handleReset} />
           )}
         </div>
       </main>
