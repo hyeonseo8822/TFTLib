@@ -12,22 +12,22 @@ export function HexCell({ cell, rowIndex, cellIndex, onSelect }) {
   const items = cell?.items ?? []
 
   return (
-    <button
-      type="button"
-      className={[
-        'hex-cell',
-        isActive ? 'active' : '',
-        hasChampion ? 'has-champion' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      onClick={() => onSelect(rowIndex, cellIndex)}
-      aria-pressed={isActive}
-      aria-label={hasChampion ? `${cell.name} — 아이템 관리` : '빈 칸 선택'}
-      title={hasChampion ? cell.name : ''}
-    >
-      {hasChampion && (
-        <>
+    <div className="hex-cell-wrapper">
+      <button
+        type="button"
+        className={[
+          'hex-cell',
+          isActive ? 'active' : '',
+          hasChampion ? 'has-champion' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        onClick={() => onSelect(rowIndex, cellIndex)}
+        aria-pressed={isActive}
+        aria-label={hasChampion ? `${cell.name} — 아이템 관리` : '빈 칸 선택'}
+        title={hasChampion ? cell.name : ''}
+      >
+        {hasChampion && (
           <img
             src={cell.image}
             alt={cell.name}
@@ -37,22 +37,24 @@ export function HexCell({ cell, rowIndex, cellIndex, onSelect }) {
               COST_RING[cell.cost] ?? 'ring-gray-400',
             ].join(' ')}
           />
-          {/* Item mini-icons — up to 3, anchored to bottom */}
-          {items.length > 0 && (
-            <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-px pb-px pointer-events-none">
-              {items.slice(0, 3).map((item) => (
-                <img
-                  key={item.id}
-                  src={item.imgUrl}
-                  alt={item.name}
-                  title={item.name}
-                  className="w-4 h-4 rounded-sm border border-white/60 object-contain bg-black/40"
-                />
-              ))}
-            </div>
-          )}
-        </>
+        )}
+      </button>
+
+      {/* 아이템은 헥스 바깥(아래)에 배치하여 챔피언 이미지를 가리지 않습니다.
+          같은 아이템이 중복 장착될 수 있으므로 key는 슬롯 인덱스 기반으로 사용합니다. */}
+      {hasChampion && items.length > 0 && (
+        <div className="hex-cell-items">
+          {items.slice(0, 3).map((item, idx) => (
+            <img
+              key={`${item.id}-${idx}`}
+              src={item.imgUrl}
+              alt={item.name}
+              title={item.name}
+              className="hex-cell-item"
+            />
+          ))}
+        </div>
       )}
-    </button>
+    </div>
   )
 }

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { INITIAL_AUGMENT_SLOTS, INITIAL_HEX_ROWS } from '../data/positioning'
 
-const LS_KEY = 'tft-positioning-boards'
+// v2: 기본 배치를 빈 보드로 초기화하면서 이전 키('tft-positioning-boards')의
+//     데이터(외부 CDN 챔피언 등 구버전 잔재)와 격리합니다.
+const LS_KEY = 'tft-positioning-boards-v2'
 const MAX_ITEMS = 3
 
 // Deep clone via JSON round-trip (safe for plain objects/arrays).
@@ -129,6 +131,23 @@ export function usePositioningState(levels) {
     return null
   }
 
+  /** 보드 위에 배치된 챔피언 수(빈 셀과 active-only 셀 제외) */
+  function countChampions(rows) {
+    let n = 0
+    for (const row of rows) {
+      for (const cell of row.cells) {
+        if (cell?.id) n += 1
+      }
+    }
+    return n
+  }
+
+  /** 외부에서 현재 레벨의 배치된 챔피언 수를 조회할 때 사용. */
+  const getChampionCount = useCallback(
+    (level) => countChampions(boardMap[level] ?? INITIAL_HEX_ROWS),
+    [boardMap],
+  )
+
   /** Place a champion from the sidebar into the active cell of the current level. */
   const placeChampion = useCallback((level, champion) => {
     setBoardMap((prev) => {
@@ -136,6 +155,19 @@ export function usePositioningState(levels) {
       const rows = next[level] ?? deepClone(INITIAL_HEX_ROWS)
       const coords = findActiveCell(rows)
       if (!coords) return prev
+
+      // 레벨 번호 = 해당 레벨에서 배치 가능한 최대 챔피언 수.
+      // 새 배치는 빈 셀에만 들어가므로(차있던 셀은 itemPanel을 열기 때문) count + 1 이 제한 초과면 차단.
+      if (countChampions(rows) >= level) {
+        alert(`${level}레벨에서는 챔피언을 최대 ${level}명까지 배치할 수 있습니다.`)
+        // active 상태를 모두 해제해 시각적 피드백.
+        next[level] = rows.map((row) => ({
+          ...row,
+          cells: row.cells.map((c) => ({ ...c, active: false })),
+        }))
+        return next
+      }
+
       const { rowIndex, cellIndex } = coords
       next[level] = rows.map((row, rIdx) => ({
         ...row,
@@ -171,8 +203,11 @@ export function usePositioningState(levels) {
   // ------------------------------------------------------------------
   const closeItemPanel = useCallback(() => setItemPanel(null), [])
 
-  /** Toggle an item on the champion in itemPanel. */
-  const toggleItemOnChampion = useCallback(
+  /**
+   * 챔피언에 아이템을 추가합니다. 같은 아이템도 중복 장착 가능하며,
+   * 최대 MAX_ITEMS(3)개까지 누적됩니다.
+   */
+  const addItemToChampion = useCallback(
     (level, item) => {
       if (!itemPanel) return
       const { rowIndex, cellIndex } = itemPanel
@@ -184,22 +219,43 @@ export function usePositioningState(levels) {
         if (!cell?.id) return prev
 
         const items = cell.items ?? []
-        const existingIdx = items.findIndex((i) => i.id === item.id)
-
-        if (existingIdx !== -1) {
-          // Unequip
-          items.splice(existingIdx, 1)
-        } else {
-          if (items.length >= MAX_ITEMS) {
-            alert(`아이템은 챔피언 한 명당 최대 ${MAX_ITEMS}개까지 장착할 수 있습니다.`)
-            return prev
-          }
-          items.push(deepClone(item))
+        if (items.length >= MAX_ITEMS) {
+          alert(`아이템은 챔피언 한 명당 최대 ${MAX_ITEMS}개까지 장착할 수 있습니다.`)
+          return prev
         }
+        items.push(deepClone(item))
 
         cell.items = items
         next[level] = rows
         // Sync the live panel state so the UI reflects instantly.
+        setItemPanel((p) => (p ? { ...p, champion: deepClone(cell) } : null))
+        return next
+      })
+    },
+    [itemPanel],
+  )
+
+  /**
+   * 슬롯 인덱스 기준으로 장착된 아이템 한 칸을 제거합니다.
+   * 중복 장착이 가능하므로 id 매칭이 아닌 인덱스로 제거해야 모호함이 없습니다.
+   */
+  const removeItemFromChampion = useCallback(
+    (level, slotIndex) => {
+      if (!itemPanel) return
+      const { rowIndex, cellIndex } = itemPanel
+
+      setBoardMap((prev) => {
+        const next = deepClone(prev)
+        const rows = next[level] ?? deepClone(INITIAL_HEX_ROWS)
+        const cell = rows[rowIndex]?.cells[cellIndex]
+        if (!cell?.id) return prev
+
+        const items = cell.items ?? []
+        if (slotIndex < 0 || slotIndex >= items.length) return prev
+        items.splice(slotIndex, 1)
+
+        cell.items = items
+        next[level] = rows
         setItemPanel((p) => (p ? { ...p, champion: deepClone(cell) } : null))
         return next
       })
@@ -239,13 +295,15 @@ export function usePositioningState(levels) {
   return {
     // board
     getRows,
+    getChampionCount,
     handleCellClick,
     placeChampion,
     removeChampion,
     // item panel
     itemPanel,
     closeItemPanel,
-    toggleItemOnChampion,
+    addItemToChampion,
+    removeItemFromChampion,
     // augments
     augmentSlots,
     augmentModal,

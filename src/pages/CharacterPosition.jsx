@@ -26,12 +26,14 @@ export default function CharacterPosition() {
 
   const {
     getRows,
+    getChampionCount,
     handleCellClick,
     placeChampion,
     removeChampion,
     itemPanel,
     closeItemPanel,
-    toggleItemOnChampion,
+    addItemToChampion,
+    removeItemFromChampion,
     augmentSlots,
     augmentModal,
     augmentPopover,
@@ -42,6 +44,7 @@ export default function CharacterPosition() {
   } = usePositioningState(LEVEL_TABS)
 
   const rows = getRows(activeLevel)
+  const championCount = getChampionCount(activeLevel)
 
   function handleLevelChange(level) {
     closeItemPanel()
@@ -64,6 +67,7 @@ export default function CharacterPosition() {
             levels={LEVEL_TABS}
             activeLevel={activeLevel}
             onLevelChange={handleLevelChange}
+            championCount={championCount}
             rows={rows}
             onCellSelect={(rowIndex, cellIndex) =>
               handleCellClick(activeLevel, rowIndex, cellIndex)
@@ -80,7 +84,8 @@ export default function CharacterPosition() {
               <ItemSelectPanel
                 champion={itemPanel.champion}
                 allItems={ALL_ITEMS}
-                onToggleItem={(item) => toggleItemOnChampion(activeLevel, item)}
+                onAddItem={(item) => addItemToChampion(activeLevel, item)}
+                onRemoveItem={(slotIndex) => removeItemFromChampion(activeLevel, slotIndex)}
                 onRemoveChampion={() =>
                   removeChampion(activeLevel, itemPanel.rowIndex, itemPanel.cellIndex)
                 }

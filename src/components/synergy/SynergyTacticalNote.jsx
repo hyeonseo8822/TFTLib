@@ -1,6 +1,8 @@
 import { Icon } from '../common/Icon'
 
 export function SynergyTacticalNote({ note }) {
+  if (!note) return null
+
   return (
     <section className="bg-[#fdfbf7] p-md border border-secondary-fixed-dim/30 rounded-lg">
       <div className="flex items-center gap-xs mb-sm">

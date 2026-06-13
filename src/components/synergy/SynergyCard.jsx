@@ -20,6 +20,8 @@ export function SynergyCard({ synergy, isActive = false, onSelect }) {
           iconBg={synergy.iconBg}
           iconColor={synergy.iconColor}
           filled={synergy.iconFilled}
+          emblem={synergy.emblem}
+          name={synergy.englishName ?? synergy.name}
         />
         <SynergyTierLabel
           label={synergy.tierLabel}
