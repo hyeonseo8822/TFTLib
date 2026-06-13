@@ -3,6 +3,7 @@ export const NAV_ITEMS = [
   { id: 'synergies', label: '시너지', path: '/synergies' },
   { id: 'augments', label: '증강체', path: '/augments' },
   { id: 'positioning', label: '캐릭터 배치', path: '/positioning' },
+  { id: 'quiz', label: 'TFT 퀴즈', path: '/quiz' },
 ]
 
 export const FOOTER_LINKS = [

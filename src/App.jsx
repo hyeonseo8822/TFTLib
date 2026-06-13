@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Augments from './pages/Augments'
 import CharacterPosition from './pages/CharacterPosition'
 import Items from './pages/Items'
+import QuizDashboard from './pages/QuizDashboard'
 import Synergy from './pages/Synergy'
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
         <Route path="/synergies" element={<Synergy />} />
         <Route path="/augments" element={<Augments />} />
         <Route path="/positioning" element={<CharacterPosition />} />
+        <Route path="/quiz" element={<QuizDashboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
