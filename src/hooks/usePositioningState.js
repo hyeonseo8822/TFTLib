@@ -151,16 +151,20 @@ export function usePositioningState(levels) {
   /** Place a champion from the sidebar into the active cell of the current level. */
   const placeChampion = useCallback((level, champion) => {
     setBoardMap((prev) => {
+      // 5레벨 선행 배치 검사: 5레벨보다 높은 레벨에서 배치 시도 시 5레벨이 비어있으면 차단
+      if (level > 5 && countChampions(prev[5] ?? INITIAL_HEX_ROWS) === 0) {
+        alert('5레벨부터 캐릭터 배치를 시작해주세요.')
+        return prev
+      }
+
       const next = deepClone(prev)
       const rows = next[level] ?? deepClone(INITIAL_HEX_ROWS)
       const coords = findActiveCell(rows)
       if (!coords) return prev
 
       // 레벨 번호 = 해당 레벨에서 배치 가능한 최대 챔피언 수.
-      // 새 배치는 빈 셀에만 들어가므로(차있던 셀은 itemPanel을 열기 때문) count + 1 이 제한 초과면 차단.
       if (countChampions(rows) >= level) {
         alert(`${level}레벨에서는 챔피언을 최대 ${level}명까지 배치할 수 있습니다.`)
-        // active 상태를 모두 해제해 시각적 피드백.
         next[level] = rows.map((row) => ({
           ...row,
           cells: row.cells.map((c) => ({ ...c, active: false })),
@@ -169,34 +173,62 @@ export function usePositioningState(levels) {
       }
 
       const { rowIndex, cellIndex } = coords
-      next[level] = rows.map((row, rIdx) => ({
-        ...row,
-        cells: row.cells.map((cell, cIdx) => {
-          if (rIdx === rowIndex && cIdx === cellIndex) {
-            return { ...deepClone(champion), active: false, items: [] }
-          }
-          return { ...cell, active: false }
-        }),
-      }))
+
+      // 현재 레벨부터 10레벨까지 전파 (연쇄 propagation)
+      const levelsToUpdate = levels.filter(lvl => lvl >= level)
+
+      for (const lvl of levelsToUpdate) {
+        const boardRows = next[lvl] ?? deepClone(INITIAL_HEX_ROWS)
+        // 전파 시 해당 레벨의 챔피언 한도 초과 여부 확인
+        if (lvl !== level && countChampions(boardRows) >= lvl) continue
+
+        next[lvl] = boardRows.map((row, rIdx) => ({
+          ...row,
+          cells: row.cells.map((cell, cIdx) => {
+            if (rIdx === rowIndex && cIdx === cellIndex) {
+              return { ...deepClone(champion), active: false, items: [] }
+            }
+            return { ...cell, active: false }
+          }),
+        }))
+      }
       return next
     })
-  }, [])
+  }, [levels])
 
   /** Remove a champion from a cell (right-click / dedicated remove action). */
   const removeChampion = useCallback((level, rowIndex, cellIndex) => {
     setItemPanel(null)
     setBoardMap((prev) => {
       const next = deepClone(prev)
-      const rows = next[level] ?? deepClone(INITIAL_HEX_ROWS)
-      next[level] = rows.map((row, rIdx) => ({
-        ...row,
-        cells: row.cells.map((cell, cIdx) =>
-          rIdx === rowIndex && cIdx === cellIndex ? {} : cell,
-        ),
-      }))
+      const levelsToUpdate = levels.filter(lvl => lvl >= level)
+
+      for (const lvl of levelsToUpdate) {
+        const rows = next[lvl] ?? deepClone(INITIAL_HEX_ROWS)
+        next[lvl] = rows.map((row, rIdx) => ({
+          ...row,
+          cells: row.cells.map((cell, cIdx) =>
+            rIdx === rowIndex && cIdx === cellIndex ? {} : cell,
+          ),
+        }))
+      }
       return next
     })
-  }, [])
+  }, [levels])
+
+  /** Clear all champions from the board for a level and propagate. */
+  const clearBoard = useCallback((level) => {
+    setItemPanel(null)
+    setBoardMap((prev) => {
+      const next = deepClone(prev)
+      const levelsToUpdate = levels.filter(lvl => lvl >= level)
+
+      for (const lvl of levelsToUpdate) {
+        next[lvl] = deepClone(INITIAL_HEX_ROWS)
+      }
+      return next
+    })
+  }, [levels])
 
   // ------------------------------------------------------------------
   // Item panel helpers
@@ -214,25 +246,33 @@ export function usePositioningState(levels) {
 
       setBoardMap((prev) => {
         const next = deepClone(prev)
-        const rows = next[level] ?? deepClone(INITIAL_HEX_ROWS)
-        const cell = rows[rowIndex]?.cells[cellIndex]
-        if (!cell?.id) return prev
+        const levelsToUpdate = levels.filter(lvl => lvl >= level)
 
-        const items = cell.items ?? []
-        if (items.length >= MAX_ITEMS) {
-          alert(`아이템은 챔피언 한 명당 최대 ${MAX_ITEMS}개까지 장착할 수 있습니다.`)
-          return prev
+        for (const lvl of levelsToUpdate) {
+          const rows = next[lvl] ?? deepClone(INITIAL_HEX_ROWS)
+          const cell = rows[rowIndex]?.cells[cellIndex]
+          if (!cell?.id) continue
+
+          const items = cell.items ?? []
+          if (items.length >= MAX_ITEMS) {
+            if (lvl === level) {
+              alert(`아이템은 챔피언 한 명당 최대 ${MAX_ITEMS}개까지 장착할 수 있습니다.`)
+            }
+            continue
+          }
+          items.push(deepClone(item))
+
+          cell.items = items
+          next[lvl] = rows
         }
-        items.push(deepClone(item))
 
-        cell.items = items
-        next[level] = rows
         // Sync the live panel state so the UI reflects instantly.
-        setItemPanel((p) => (p ? { ...p, champion: deepClone(cell) } : null))
+        const currentCell = next[level][rowIndex]?.cells[cellIndex]
+        setItemPanel((p) => (p ? { ...p, champion: deepClone(currentCell) } : null))
         return next
       })
     },
-    [itemPanel],
+    [itemPanel, levels],
   )
 
   /**
@@ -246,21 +286,27 @@ export function usePositioningState(levels) {
 
       setBoardMap((prev) => {
         const next = deepClone(prev)
-        const rows = next[level] ?? deepClone(INITIAL_HEX_ROWS)
-        const cell = rows[rowIndex]?.cells[cellIndex]
-        if (!cell?.id) return prev
+        const levelsToUpdate = levels.filter(lvl => lvl >= level)
 
-        const items = cell.items ?? []
-        if (slotIndex < 0 || slotIndex >= items.length) return prev
-        items.splice(slotIndex, 1)
+        for (const lvl of levelsToUpdate) {
+          const rows = next[lvl] ?? deepClone(INITIAL_HEX_ROWS)
+          const cell = rows[rowIndex]?.cells[cellIndex]
+          if (!cell?.id) continue
 
-        cell.items = items
-        next[level] = rows
-        setItemPanel((p) => (p ? { ...p, champion: deepClone(cell) } : null))
+          const items = cell.items ?? []
+          if (slotIndex < 0 || slotIndex >= items.length) continue
+          items.splice(slotIndex, 1)
+
+          cell.items = items
+          next[lvl] = rows
+        }
+
+        const currentCell = next[level][rowIndex]?.cells[cellIndex]
+        setItemPanel((p) => (p ? { ...p, champion: deepClone(currentCell) } : null))
         return next
       })
     },
-    [itemPanel],
+    [itemPanel, levels],
   )
 
   // ------------------------------------------------------------------
@@ -299,6 +345,7 @@ export function usePositioningState(levels) {
     handleCellClick,
     placeChampion,
     removeChampion,
+    clearBoard,
     // item panel
     itemPanel,
     closeItemPanel,
