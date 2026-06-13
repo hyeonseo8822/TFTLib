@@ -22,20 +22,6 @@ function RecipeIngredient({ matId }) {
   )
 }
 
-function saveToNotes(item) {
-  try {
-    const existing = JSON.parse(localStorage.getItem('tft-notes') || '[]')
-    const alreadySaved = existing.some((n) => n.id === item.id)
-    if (!alreadySaved) {
-      existing.push({ id: item.id, name: item.name, savedAt: Date.now() })
-      localStorage.setItem('tft-notes', JSON.stringify(existing))
-    }
-    return !alreadySaved
-  } catch {
-    return false
-  }
-}
-
 export function ItemDetailPanel({ item }) {
   if (!item) {
     return (
@@ -47,15 +33,6 @@ export function ItemDetailPanel({ item }) {
   }
 
   const categoryClass = CATEGORY_COLOR[item.category] ?? 'bg-surface-container text-on-surface-variant'
-
-  function handleSave() {
-    const saved = saveToNotes(item)
-    if (!saved) {
-      alert(`"${item.name}"은(는) 이미 노트에 저장되어 있습니다.`)
-    } else {
-      alert(`"${item.name}"을(를) 노트에 저장했습니다.`)
-    }
-  }
 
   return (
     <div className="flex flex-col sm:flex-row gap-lg">
@@ -157,16 +134,6 @@ export function ItemDetailPanel({ item }) {
             ))}
           </div>
         )}
-
-        {/* Save button */}
-        <button
-          type="button"
-          onClick={handleSave}
-          className="mt-auto w-full sm:w-auto sm:self-start bg-primary text-white px-lg py-3 rounded-xl font-label-md flex items-center justify-center gap-2 hover:bg-primary/90 transition-all active:scale-[0.98]"
-        >
-          <Icon name="bookmark" />
-          내 노트에 저장
-        </button>
       </div>
     </div>
   )
