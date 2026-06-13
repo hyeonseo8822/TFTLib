@@ -19,10 +19,22 @@ import { usePositioningState } from '../hooks/usePositioningState'
 // All equippable items — completed + material
 const ALL_ITEMS = [...COMPLETED_ITEMS, ...MATERIAL_ITEMS]
 
+const STRATEGY_LS_KEY = 'tft-strategy-notes'
+
 export default function CharacterPosition() {
   const [activeLevel, setActiveLevel] = useState(DEFAULT_LEVEL)
-  const [placementTips, setPlacementTips] = useState('')
-  const [levelStrategy, setLevelStrategy] = useState('')
+  const [placementTips, setPlacementTips] = useState(() => {
+    try {
+      const stored = localStorage.getItem(STRATEGY_LS_KEY)
+      return stored ? JSON.parse(stored).placementTips : ''
+    } catch { return '' }
+  })
+  const [levelStrategy, setLevelStrategy] = useState(() => {
+    try {
+      const stored = localStorage.getItem(STRATEGY_LS_KEY)
+      return stored ? JSON.parse(stored).levelStrategy : ''
+    } catch { return '' }
+  })
 
   const {
     getRows,
@@ -30,6 +42,7 @@ export default function CharacterPosition() {
     handleCellClick,
     placeChampion,
     removeChampion,
+    clearBoard,
     itemPanel,
     closeItemPanel,
     addItemToChampion,
@@ -49,6 +62,16 @@ export default function CharacterPosition() {
   function handleLevelChange(level) {
     closeItemPanel()
     setActiveLevel(level)
+  }
+
+  function handleSaveStrategy() {
+    try {
+      const data = { placementTips, levelStrategy }
+      localStorage.setItem(STRATEGY_LS_KEY, JSON.stringify(data))
+      alert('전략 정보가 저장되었습니다.')
+    } catch {
+      alert('저장 중 오류가 발생했습니다.')
+    }
   }
 
   return (
@@ -72,6 +95,7 @@ export default function CharacterPosition() {
             onCellSelect={(rowIndex, cellIndex) =>
               handleCellClick(activeLevel, rowIndex, cellIndex)
             }
+            onClearBoard={() => clearBoard(activeLevel)}
             augmentSlots={augmentSlots}
             popoverSlotId={augmentPopover?.slotId ?? null}
             onEmptySlotClick={openAugmentModal}
@@ -100,6 +124,7 @@ export default function CharacterPosition() {
           levelStrategy={levelStrategy}
           onPlacementTipsChange={(e) => setPlacementTips(e.target.value)}
           onLevelStrategyChange={(e) => setLevelStrategy(e.target.value)}
+          onSave={handleSaveStrategy}
         />
       </main>
 
