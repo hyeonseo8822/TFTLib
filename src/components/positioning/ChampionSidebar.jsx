@@ -20,7 +20,7 @@ export function ChampionSidebar({ champions, onChampionSelect }) {
   }))
 
   return (
-    <aside className="w-full md:w-[420px] border-r border-outline-variant bg-surface-container-low p-md flex flex-col gap-md sticky top-20 h-[calc(100vh-80px)]">
+    <aside className="w-full md:w-[320px] border-r border-outline-variant bg-surface-container-low p-md flex flex-col gap-md sticky top-20 h-[calc(100vh-80px)]">
       <ChampionSidebarHeader />
       <div className="flex-grow overflow-y-auto custom-scrollbar pr-xs flex flex-col gap-lg">
         {groupedChampions.map(({ cost, list }) => (

@@ -2,12 +2,16 @@ import { SaveStrategyButton } from './SaveStrategyButton'
 import { StrategyTextarea } from './StrategyTextarea'
 
 export function StrategyPanel({
+  strategyName,
   placementTips,
   levelStrategy,
+  onStrategyNameChange,
   onPlacementTipsChange,
   onLevelStrategyChange,
   onSave,
 }) {
+  const isNameEmpty = !strategyName.trim()
+
   return (
     <aside className="w-full md:w-80 border-l border-outline-variant bg-surface-container-low p-md flex flex-col gap-lg sticky top-20 h-[calc(100vh-80px)]">
       <div className="flex flex-col">
@@ -17,6 +21,30 @@ export function StrategyPanel({
         </p>
       </div>
       <div className="flex flex-col gap-md flex-grow">
+        <div className="flex flex-col gap-xs">
+          <label
+            htmlFor="strategy-name"
+            className="font-label-md text-label-md text-on-surface-variant flex items-center gap-1"
+          >
+            전략 이름
+            <span className="text-red-500" aria-hidden="true">*</span>
+            <span className="sr-only">(필수)</span>
+          </label>
+          <input
+            id="strategy-name"
+            type="text"
+            required
+            aria-required="true"
+            placeholder="예: 사이오닉 + 전송체 8레벨"
+            value={strategyName}
+            onChange={onStrategyNameChange}
+            className={[
+              'w-full bg-white border rounded-lg px-sm py-2 font-body-md text-body-md',
+              'focus:ring-2 focus:ring-primary focus:border-transparent outline-none',
+              isNameEmpty ? 'border-outline-variant' : 'border-primary/40',
+            ].join(' ')}
+          />
+        </div>
         <StrategyTextarea
           id="placement-tips"
           label="배치 팁"
@@ -32,7 +60,7 @@ export function StrategyPanel({
           onChange={onLevelStrategyChange}
         />
       </div>
-      <SaveStrategyButton onClick={onSave} />
+      <SaveStrategyButton onClick={onSave} disabled={isNameEmpty} />
     </aside>
   )
 }

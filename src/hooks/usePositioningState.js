@@ -338,6 +338,52 @@ export function usePositioningState(levels) {
   const closeAugmentModal = useCallback(() => setAugmentModal(null), [])
   const closeAugmentPopover = useCallback(() => setAugmentPopover(null), [])
 
+  // ------------------------------------------------------------------
+  // Snapshot helpers — 이름별 전략 저장/불러오기에서 사용
+  // ------------------------------------------------------------------
+
+  /** 현재 보드 + 증강 상태를 직렬화 가능한 스냅샷으로 반환합니다. */
+  const getSnapshot = useCallback(
+    () => ({
+      boardMap: deepClone(boardMap),
+      augmentSlots: deepClone(augmentSlots),
+    }),
+    [boardMap, augmentSlots],
+  )
+
+  /**
+   * 스냅샷을 적용하여 보드/증강 상태를 통째로 교체합니다.
+   * 누락된 레벨은 빈 보드로 채워 안전하게 초기화합니다.
+   */
+  const applySnapshot = useCallback(
+    (snapshot) => {
+      if (!snapshot || typeof snapshot !== 'object') return
+      setItemPanel(null)
+      setAugmentModal(null)
+      setAugmentPopover(null)
+
+      const incomingBoards = snapshot.boardMap && typeof snapshot.boardMap === 'object'
+        ? snapshot.boardMap
+        : {}
+      const nextBoardMap = {}
+      for (const level of levels) {
+        nextBoardMap[level] = incomingBoards[level]
+          ? deepClone(incomingBoards[level])
+          : deepClone(INITIAL_HEX_ROWS)
+      }
+      setBoardMap(nextBoardMap)
+
+      const nextAugments = Array.isArray(snapshot.augmentSlots)
+        ? deepClone(snapshot.augmentSlots)
+        : deepClone(INITIAL_AUGMENT_SLOTS)
+      setAugmentSlots(nextAugments)
+    },
+    [levels],
+  )
+
+  /** 모든 레벨의 보드와 증강 슬롯, 부속 UI를 초기 상태로 되돌립니다. */
+  const resetAll = useCallback(() => applySnapshot({}), [applySnapshot])
+
   return {
     // board
     getRows,
@@ -360,5 +406,9 @@ export function usePositioningState(levels) {
     toggleAugmentPopover,
     closeAugmentModal,
     closeAugmentPopover,
+    // snapshot
+    getSnapshot,
+    applySnapshot,
+    resetAll,
   }
 }

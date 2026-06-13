@@ -106,7 +106,7 @@ function makeChampion({
 // 3. 레벨 탭
 // ==========================================
 export const LEVEL_TABS = [5, 6, 7, 8, 9, 10]
-export const DEFAULT_LEVEL = 8
+export const DEFAULT_LEVEL = 5
 
 // ==========================================
 // 4. 챔피언 목록 (Champions_Stats.md 기반 63명)
