@@ -1,7 +1,13 @@
 import { SaveStrategyButton } from './SaveStrategyButton'
 import { StrategyTextarea } from './StrategyTextarea'
 
-export function StrategyPanel({ placementTips, levelStrategy, onPlacementTipsChange, onLevelStrategyChange }) {
+export function StrategyPanel({
+  placementTips,
+  levelStrategy,
+  onPlacementTipsChange,
+  onLevelStrategyChange,
+  onSave,
+}) {
   return (
     <aside className="w-full md:w-80 border-l border-outline-variant bg-surface-container-low p-md flex flex-col gap-lg sticky top-20 h-[calc(100vh-80px)]">
       <div className="flex flex-col">
@@ -26,7 +32,7 @@ export function StrategyPanel({ placementTips, levelStrategy, onPlacementTipsCha
           onChange={onLevelStrategyChange}
         />
       </div>
-      <SaveStrategyButton />
+      <SaveStrategyButton onClick={onSave} />
     </aside>
   )
 }
