@@ -2,7 +2,6 @@ import { AugmentDetailCard } from './AugmentDetailCard'
 import { EffectDescription } from './EffectDescription'
 import { OperationTips } from './OperationTips'
 import { StrategistMemoCard } from './StrategistMemoCard'
-import { ViewStatsButton } from './ViewStatsButton'
 
 export function AugmentDetailPanel({ augment }) {
   return (
@@ -13,7 +12,6 @@ export function AugmentDetailPanel({ augment }) {
           <AugmentDetailCard augment={augment} />
           <EffectDescription description={augment.description} />
           <OperationTips tips={augment.tips} />
-          <ViewStatsButton />
         </div>
         <StrategistMemoCard />
       </div>

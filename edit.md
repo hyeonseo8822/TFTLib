@@ -1,67 +1,133 @@
-# 수정 사항 정리
+# 증강체(Augments) 섹션 전면 개편 작업 기록
 
-이번 세션에서 작업한 내용을 정리합니다.
+이전 커밋(`5300811 feat: expand champion roster and revamp synergy section with emblem assets`) 이후 작업한 내용을 정리합니다.
 
-## 1. `src/data/items.js` — 아이템 데이터 재구성
+## 1. 데이터 소스 전환 — 파일/폴더 기반으로 단순화
 
-`Items.md`와 `src/assets/items/` 폴더의 이미지를 기반으로 객체를 새로 만들었습니다.
+### Before
+- `Augments_and_Synergies.md` (영문)와 `augmentation.md` (한글)를 모두 파싱
+- 한글→영문 슬러그 매핑(`KR_TO_SLUG`)을 약 180줄 수작업으로 관리
+- 한글→이미지 키 직접 매핑(`KR_TO_IMAGE_KEY`)도 별도 관리
+- 이미지 파일은 `src/assets/augmentation/` 한 폴더에 영문 슬러그 파일명으로 존재
+- 이미지 매칭은 영문 슬러그 + `TFT_Augment_<X>` 패턴 + 5가지 fallback 룰로 처리
 
-### 변경 내용
+### After
+- `augmentation.md` (한글) **단일 소스**만 파싱
+- 이미지는 티어별 하위 폴더로 정리: `src/assets/augmentation/{silver,gold,prism}/`
+- 파일명을 **한글 증강 이름과 동일**하게 저장 (예: `gold/U.R.F.jpg`, `silver/가지 뻗기.png`)
+- 한글 이름으로 곧장 이미지/티어 매칭 → 매핑 테이블 전부 제거
 
-- **이미지 소스를 외부 CDN(ddragon)에서 로컬 에셋으로 전환**
-  - Vite의 `import.meta.glob`을 사용해 빌드 시점에 PNG 파일들을 일괄 import.
-  - `src/assets/items/Components/*.png` → `MATERIAL_ITEMS.imgUrl`
-  - `src/assets/items/Completed/*.png` → `COMPLETED_ITEMS.imgUrl`
-- **`MATERIAL_ITEMS` (재료 10종)**
-  - 기존 9종에서 `frying-pan`(프라이팬, id `10`) 추가.
-  - 각 객체에 `id`, `slug`, `name`(한글), `englishName`, `description`(예: `+10% 공격력`), `imgUrl` 부여.
-- **`COMPLETED_ITEMS` (완성 아이템 39종)**
-  - `Items.md`의 "Completed items" 표 전체를 포함 (기존 21종 → 39종).
-  - 각 객체 필드: `id`, `slug`, `name`(한글), `englishName`, `category`, `recipe`, `imgUrl`, `stats`, `effect`.
-  - `stats`는 `buildStats()` 헬퍼로 표의 8개 컬럼(체력/방어력/마법 저항력/공격 속도/공격력/주문력/치명타 확률/마나)을 한글 라벨로 변환.
-  - `effect`는 `Items.md`의 description을 한글로 번역.
-  - `recipe`는 두 재료의 `id` 쌍이 모두 유니크하도록 배정 (조합 실험대 호환).
-- **카테고리 4종으로 확장**
-  - 기존: `공격형`, `방어형`, `마법형`
-  - 추가: `유틸형` (전술가의 망토/왕관/방패, 도둑의 장갑용).
-- **`CATEGORY_FILTERS` 업데이트**
-  - `유틸형` 필터 추가.
-- **기존 필드 정리**
-  - `Items.md`에 정보가 없는 `recommendedUnits`, `tags`는 제거 (UI는 옵셔널 체이닝으로 안전 처리).
+```js
+// src/data/augments.js — 폴더 기반 이미지/티어 룩업
+const TIER_BY_FOLDER = [
+  { tier: 1, index: buildImageIndex(silverGlob) },
+  { tier: 2, index: buildImageIndex(goldGlob) },
+  { tier: 3, index: buildImageIndex(prismGlob) },
+]
 
-### 비고
-- `void-staff`는 `Items.md` 스탯상 3개 재료 조합이 필요해 보여 표준 2-재료 레시피로 매칭하기 어려워 `recipe: []`로 두었습니다. 도감에서는 정상 표시되지만 조합 실험대로는 만들 수 없습니다.
+function lookupByName(name) {
+  for (const key of nameKeys(name)) {
+    for (const { tier, index } of TIER_BY_FOLDER) {
+      if (index[key]) return { image: index[key], tier }
+    }
+  }
+  return null
+}
+```
 
----
+## 2. `augmentation.md` 정비
 
-## 2. `src/components/items/CombinationLab.jsx` — 조합 실험대 UI 개편
+- 헤딩이 깨져서 설명 줄이 `##`로 promote 되던 케이스 정리 (한글 어미·종결 부호 휴리스틱으로 fallback도 유지)
+- 사용자가 직접 **티어별 섹션 순서로 재정렬**:
+  - 실버: `가지 뻗기` ~ `골드 획득`
+  - 골드: `U.R.F` ~ `휴대용 대장간`
+  - 프리즘: `간이 대장간` ~ `힘을 실은 제련`
+- 폴더 매칭 실패 시 fallback 으로 사용할 수 있도록 `TIER_SECTION_MARKERS` 도입
 
-새로운 `items.js` 구조를 활용해 UX를 개선했습니다.
+```js
+const TIER_SECTION_MARKERS = {
+  'U.R.F': 2,          // 골드 섹션 시작
+  '간이 대장간': 3,    // 프리즘 섹션 시작
+}
+```
 
-### 변경 내용
+## 3. 티어 결정 우선순위
 
-- **자동 조합** — 두 슬롯이 채워지면 즉시 결과를 계산하고 상세 패널까지 동기화. 수동 "조합하기" 버튼 제거.
-- **재료 그리드 10컬럼화** — 프라이팬 추가에 맞춰 `sm:grid-cols-9` → `sm:grid-cols-10`.
-- **재료 슬롯에 설명 표시** — 선택된 재료의 한글 이름 아래에 `description`(예: `+20 방어력`) 표시. `MaterialSlot` 컴포넌트 신설.
-- **재료 그리드 툴팁 강화** — `name (description)` 형태로 마우스 오버 시 표시.
-- **결과 카드 개선**
-  - 배경을 `bg-primary-container`(진한 청록) → `bg-surface`(밝은 크림)로 변경해 재료 슬롯과 톤 통일 + 가독성 확보.
-  - 완성 아이템 이름 색상을 `text-primary`(짙은 청록) → `text-secondary`(따뜻한 골드)로 변경. "완성!" 뱃지의 골드 톤과 일치.
-  - 스탯 리스트를 카드 내부에 컴팩트한 `라벨 — 값` 형식으로 표시.
-  - 카드 너비를 `w-28/32` 정사각형 → `w-32 sm:w-36` 가변 높이로 조정해 스탯 줄에 맞춰 자동 확장.
-- **슬롯 클리어 동작 개선**
-  - 슬롯 1을 비우면 슬롯 2의 값이 자연스럽게 슬롯 1로 당겨옴.
-  - 두 슬롯이 채워진 상태에서 새 재료를 선택하면 슬롯 2를 비우고 슬롯 1에 새 재료를 채워 빠르게 재시도 가능.
-- **사용하지 않는 상수 제거** — 중간 단계에서 도입했던 `CATEGORY_BADGE_CLASS`, 미사용 disable 상태 등 정리.
+1. 이미지 폴더 위치 (`silver/`/`gold/`/`prism/`)
+2. `augmentation.md` 섹션 위치 (`TIER_SECTION_MARKERS` 기반)
+3. 영웅 증강 휴리스틱 (이름이 `...의 은총` 으로 끝나면 프리즘)
+4. 기본값 실버
 
----
+## 4. ID 충돌 버그 수정 (`신병`/`신병+`/`신병++`)
 
-## 3. 신규 에셋 (이전 단계에서 스테이징됨)
+기존 `buildId` 는 `[^a-z0-9가-힣]+` 를 모두 `-` 로 치환 후 trailing `-` 를 제거해서, `신병+` → `신병-` → `신병` 으로 `+` 정보가 사라졌습니다. 같은 ID 가 여러 augment 에 부여돼 React key 충돌 + 카드 선택 오작동.
 
-이번 작업 흐름에 필요해 도입된 정적 리소스 및 참고 문서.
+```js
+function buildId(name, idx) {
+  const safe = name
+    .toLowerCase()
+    .replace(/\+\+/g, '-plusplus')
+    .replace(/\+/g, '-plus')
+    .replace(/[^a-z0-9가-힣]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+  return safe || `aug-${idx}`
+}
+```
 
-- `src/assets/champions/*.png` — TFT 챔피언 아이콘
-- `src/assets/emblems/*.png` — 시너지 엠블럼 아이콘
-- `src/assets/items/Components/*.png` — 재료 아이템 10종 이미지
-- `src/assets/items/Completed/*.png` — 완성 아이템 39종 이미지
-- `Items.md`, `Augments_and_Synergies.md`, `Champions_Stats.md` — 데이터 작성용 참고 문서
+| 이름 | Before | After |
+| --- | --- | --- |
+| `신병` | `신병` | `신병` |
+| `신병+` | `신병` ⚠ | `신병-plus` |
+| `신병++` | `신병` ⚠ | `신병-plusplus` |
+| `부스터 팩++` | `부스터-팩` ⚠ | `부스터-팩-plusplus` |
+
+## 5. 티어/가나다 정렬
+
+폴더 위치와 MD 섹션이 어긋난 항목(예: 실버 섹션에 있지만 `gold/` 폴더에 있는 `골드 획득`)으로 인해 목록 정렬이 깨졌습니다. 최종 티어 기준으로 묶고 한글 가나다순 정렬을 적용:
+
+```js
+const TIER_ORDER = { 실버: 0, 골드: 1, 프리즘: 2 }
+const koCollator = new Intl.Collator('ko', { numeric: true, sensitivity: 'base' })
+
+export const AUGMENTS = koreanAugments
+  .map((ko, idx) => buildAugment(ko, idx))
+  .filter((a) => a.name && a.name.length > 0)
+  .sort((a, b) => {
+    const tierDiff = (TIER_ORDER[a.tier] ?? 99) - (TIER_ORDER[b.tier] ?? 99)
+    if (tierDiff !== 0) return tierDiff
+    return koCollator.compare(a.name, b.name)
+  })
+```
+
+- `numeric: true` → `삼인방 I`, `삼인방 II` 자연 정렬
+- `sensitivity: 'base'` → 대소문자/악센트 무시 (`U.R.F` 등 영문 항목도 자연스럽게 포함)
+
+## 6. UI 정리
+
+- `AugmentDetailPanel.jsx` 에서 **상세 통계 데이터 보기** 버튼 제거
+  - `ViewStatsButton.jsx` 파일 자체 삭제 (다른 곳에서 사용 안 함)
+- **영웅 증강** 카테고리 필터 버튼 제거 (`CATEGORY_FILTERS = []`)
+  - `TierFilterGroup.jsx` 에서 `categoryFilters.length > 0` 조건부 렌더로 구분선(`FilterDivider`)까지 함께 숨김
+- `AugmentDetailCard.jsx` 에서 영문 이름 서브타이틀 제거 (영문 데이터 의존성 제거에 맞춤)
+- `EffectDescription.jsx` 에서 멀티라인 설명을 `\n` 기준으로 분리 렌더링
+- `OperationTips.jsx` 에서 `tips` 가 없을 때 컴포넌트 자체 미렌더링
+
+## 7. 기타
+
+- `vite.config.js` 에 `server.fs.allow: ['.']` 추가 — 프로젝트 루트의 `.md` 파일을 `?raw` import 할 수 있도록 허용
+
+## 8. 영향 받은 파일
+
+```
+augmentation.md                                         (신규, 1419 줄)
+vite.config.js                                          (+7)
+src/data/augments.js                                    (대폭 단순화)
+src/hooks/useAugmentFilters.js                          (영웅 카테고리 로직 정리)
+src/components/augments/AugmentDetailPanel.jsx          (-2)
+src/components/augments/AugmentDetailCard.jsx           (영문 서브타이틀 제거)
+src/components/augments/EffectDescription.jsx           (멀티라인 지원)
+src/components/augments/OperationTips.jsx               (빈 props 가드)
+src/components/augments/TierFilterGroup.jsx             (조건부 구분선)
+src/components/augments/ViewStatsButton.jsx             (삭제)
+src/assets/augmentation/{silver,gold,prism}/*           (신규 ~256개 이미지)
+```

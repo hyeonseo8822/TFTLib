@@ -19,15 +19,19 @@ export function TierFilterGroup({
           onClick={() => onTierFilterChange(filter.id)}
         />
       ))}
-      <FilterDivider />
-      {categoryFilters.map((filter) => (
-        <TierFilterButton
-          key={filter.id}
-          label={filter.label}
-          isActive={activeCategoryFilterId === filter.id}
-          onClick={() => onCategoryFilterChange(filter.id)}
-        />
-      ))}
+      {categoryFilters.length > 0 && (
+        <>
+          <FilterDivider />
+          {categoryFilters.map((filter) => (
+            <TierFilterButton
+              key={filter.id}
+              label={filter.label}
+              isActive={activeCategoryFilterId === filter.id}
+              onClick={() => onCategoryFilterChange(filter.id)}
+            />
+          ))}
+        </>
+      )}
     </div>
   )
 }

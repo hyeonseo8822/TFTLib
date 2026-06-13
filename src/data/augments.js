@@ -1,202 +1,201 @@
-import { TIER_TYPES } from '../constants/tierStyles';
+// ============================================================
+// 0. 원본 데이터
+//    - augmentation.md       : 한글 증강 이름/설명 (사용자 직접 정리)
+//    - src/assets/augmentation/{silver|gold|prism}/<한글이름>.{png|jpg}
+//      → 폴더 위치가 곧 티어, 파일명이 곧 한글 이름
+// ============================================================
+import augmentationMd from '../../augmentation.md?raw'
+import { TIER_TYPES } from '../constants/tierStyles'
 
+const silverGlob = import.meta.glob(
+  '../assets/augmentation/silver/*.{png,jpg,jpeg}',
+  { eager: true, query: '?url', import: 'default' },
+)
+const goldGlob = import.meta.glob(
+  '../assets/augmentation/gold/*.{png,jpg,jpeg}',
+  { eager: true, query: '?url', import: 'default' },
+)
+const prismGlob = import.meta.glob(
+  '../assets/augmentation/prism/*.{png,jpg,jpeg}',
+  { eager: true, query: '?url', import: 'default' },
+)
+
+// ============================================================
+// 1. 폴더별 한글 파일명 → URL 인덱스
+//    이름 매칭이 어긋나지 않도록 공백 제거/소문자 변형도 함께 등록합니다.
+// ============================================================
+function nameKeys(name) {
+  const trimmed = name.trim()
+  const noSpace = trimmed.replace(/\s+/g, '')
+  const set = new Set([trimmed, noSpace, trimmed.toLowerCase(), noSpace.toLowerCase()])
+  return [...set]
+}
+
+function buildImageIndex(glob) {
+  /** @type {Record<string, string>} */
+  const idx = {}
+  for (const [path, url] of Object.entries(glob)) {
+    const file = path.split('/').pop().replace(/\.(png|jpe?g)$/i, '')
+    for (const key of nameKeys(file)) {
+      if (key && !idx[key]) idx[key] = url
+    }
+  }
+  return idx
+}
+
+const TIER_BY_FOLDER = [
+  { tier: 1, index: buildImageIndex(silverGlob) },
+  { tier: 2, index: buildImageIndex(goldGlob) },
+  { tier: 3, index: buildImageIndex(prismGlob) },
+]
+
+const PLACEHOLDER_IMAGE = null
+
+/** 한글 이름으로 이미지와 티어를 동시에 조회 (폴더 위치 기준) */
+function lookupByName(name) {
+  for (const key of nameKeys(name)) {
+    for (const { tier, index } of TIER_BY_FOLDER) {
+      if (index[key]) return { image: index[key], tier }
+    }
+  }
+  return null
+}
+
+// ============================================================
+// 2. augmentation.md 파싱 — 한글 이름 + 설명 + 섹션 기반 티어
+//    파일 구조 (사용자 수동 정렬):
+//      - 실버: "가지 뻗기" ~ "골드 획득"
+//      - 골드: "U.R.F" ~ "휴대용 대장간"
+//      - 프리즘: "간이 대장간" ~ 끝
+//    이미지 폴더 매칭이 실패할 때 폴백으로 사용합니다.
+// ============================================================
+const TIER_SECTION_MARKERS = {
+  'U.R.F': 2, // 골드 섹션 시작
+  '간이 대장간': 3, // 프리즘 섹션 시작
+}
+
+function isDescriptionHeading(text) {
+  if (!text) return false
+  if (/[.!?]$/.test(text)) return true
+  if (/(다|요|까)\.?$/.test(text)) return true
+  return false
+}
+
+function parseAugmentation(md) {
+  const lines = md.split('\n')
+  const result = []
+  let current = null
+  let currentTier = 1
+
+  const finalize = () => {
+    if (!current) return
+    const desc = current.descLines
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .join('\n')
+    result.push({ name: current.name, description: desc, tier: current.tier })
+    current = null
+  }
+
+  for (const raw of lines) {
+    const line = raw.trimEnd()
+
+    if (line.startsWith('# ') && !line.startsWith('## ')) continue
+
+    if (line.startsWith('## ')) {
+      const heading = line.slice(3).trim()
+      if (!heading) continue
+
+      if (isDescriptionHeading(heading)) {
+        if (current) current.descLines.push(heading)
+      } else {
+        finalize()
+        if (TIER_SECTION_MARKERS[heading]) {
+          currentTier = TIER_SECTION_MARKERS[heading]
+        }
+        current = { name: heading, descLines: [], tier: currentTier }
+      }
+      continue
+    }
+
+    if (line.startsWith('>') || line.startsWith('---')) continue
+
+    if (line.trim() && current) {
+      current.descLines.push(line.trim())
+    }
+  }
+  finalize()
+  return result
+}
+
+const koreanAugments = parseAugmentation(augmentationMd)
+
+// ============================================================
+// 3. 최종 AUGMENTS 빌드
+//    티어 우선순위: 폴더(이미지) > md 섹션 > 기본 실버
+// ============================================================
+function tierToType(tier) {
+  return tier === 3 ? TIER_TYPES.PRISM : tier === 2 ? TIER_TYPES.GOLD : TIER_TYPES.SILVER
+}
+function tierToLabel(tier) {
+  return tier === 3 ? '프리즘' : tier === 2 ? '골드' : '실버'
+}
+
+function buildId(name, idx) {
+  // "신병+" / "신병++" 처럼 + 접미사는 의미를 가지므로 토큰으로 보존
+  // (그냥 [^a-z0-9가-힣] 으로 제거하면 "신병", "신병+", "신병++" 가 같은 ID 가 되어 충돌)
+  const safe = name
+    .toLowerCase()
+    .replace(/\+\+/g, '-plusplus')
+    .replace(/\+/g, '-plus')
+    .replace(/[^a-z0-9가-힣]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+  return safe || `aug-${idx}`
+}
+
+function buildAugment(ko, idx) {
+  const isHero = /의 은총$/.test(ko.name)
+  const matched = lookupByName(ko.name)
+  const tier = matched?.tier ?? ko.tier ?? (isHero ? 3 : 1)
+  const image = matched?.image ?? PLACEHOLDER_IMAGE
+
+  const id = buildId(ko.name, idx)
+  return {
+    id,
+    slug: id,
+    name: ko.name,
+    tier: tierToLabel(tier),
+    tierType: tierToType(tier),
+    image,
+    description: ko.description || '(설명 없음)',
+    isHero,
+  }
+}
+
+// ============================================================
+// 4. Exports
+// ============================================================
 export const TIER_FILTERS = [
   { id: 'all', label: '전체', tierType: null },
   { id: 'silver', label: '실버', tierType: TIER_TYPES.SILVER },
   { id: 'gold', label: '골드', tierType: TIER_TYPES.GOLD },
   { id: 'prism', label: '프리즘', tierType: TIER_TYPES.PRISM },
-];
+]
 
-export const CATEGORY_FILTERS = [
-  { id: 'combat-economy', label: '전투/경제' },
-];
+export const CATEGORY_FILTERS = []
 
-export const AUGMENTS = [
-  // === 실버 등급 (Silver Tier) ===
-  {
-    id: 'careful-study',
-    name: '신중한 학습',
-    tier: '실버',
-    tierType: TIER_TYPES.SILVER,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/carefulstudy1.png',
-    description: '전투 시작 시, 아군 유닛이 영구적으로 2%의 공격 속도를 얻습니다. 이 효과는 매 라운드 중첩됩니다.',
-    tips: '안정적인 후반 도모를 원하는 초반 빌드업 상황',
-  },
-  {
-    id: 'cybernetic-uplink',
-    name: '사이버네틱 통신',
-    tier: '실버',
-    tierType: TIER_TYPES.SILVER,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/cyberneticuplink1.png',
-    description: '아이템을 장착한 아군 유닛의 체력이 150 증가하고 매초 2.5의 마나를 회복합니다.',
-    tips: '아이템이 골고루 분배된 밸런스 조합',
-  },
-  {
-    id: 'pandoras-items',
-    name: '판도라의 아이템',
-    tier: '실버',
-    tierType: TIER_TYPES.SILVER,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/pandorasitems1.png',
-    description: '매 라운드 시작 시 대기석의 아이템이 무작위로 변합니다. (조합 아이템 1개 획득)',
-    tips: '특정 핵심 코어 아이템이 절실한 상황',
-  },
-  {
-    id: 'blood-money',
-    name: '혈투',
-    tier: '실버',
-    tierType: TIER_TYPES.SILVER,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/bloodmoney1.png',
-    description: '플레이어의 체력이 3 감소할 때마다 2골드를 획득합니다.',
-    tips: '초반 연패를 타며 돈을 극대화하는 턴우 정 운영 시',
-  },
-  {
-    id: 'recombination',
-    name: '재조합기',
-    tier: '실버',
-    tierType: TIER_TYPES.SILVER,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/recombobulator1.png',
-    description: '대기석의 유닛들을 한 단계 더 높은 무작위 유닛으로 변환합니다. 재조합기 아이템을 2개 얻습니다.',
-    tips: '초반에 나온 고코스트 쓰레기 기물을 사기 기물로 도박할 때',
-  },
-  {
-    id: 'best-friends-1',
-    name: '단짝 I',
-    tier: '실버',
-    tierType: TIER_TYPES.SILVER,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/bestfriends1.png',
-    description: '서로 인접한 두 유닛이 10%의 공격 속도와 15의 방어력을 얻습니다.',
-    tips: '소수 정예 기물 위주로 2개씩 짝지어 배치할 때',
-  },
+// 티어 → 그룹 내 한글 이름 가나다순으로 정렬
+// (MD 섹션과 이미지 폴더 위치가 어긋난 항목이 있어도 최종 티어 기준으로 깔끔하게 묶임)
+const TIER_ORDER = { 실버: 0, 골드: 1, 프리즘: 2 }
+const koCollator = new Intl.Collator('ko', { numeric: true, sensitivity: 'base' })
 
-  // === 골드 등급 (Gold Tier) ===
-  {
-    id: 'compound-interest',
-    name: '부익부',
-    tier: '골드',
-    tierType: TIER_TYPES.GOLD,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/richgetricher2.png',
-    description: '매 라운드 종료 시 보유한 골드 10당 2의 추가 골드를 획득합니다. 최대 이자가 7골드로 상승합니다.',
-    tips: '이자가 충분히 확보된 연승 운영 상황',
-  },
-  {
-    id: 'battle-mage',
-    name: '전투 마법사',
-    tier: '골드',
-    tierType: TIER_TYPES.GOLD,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/battlemage2.png',
-    description: '전방 2열에 배치된 아군 유닛이 30의 주문력과 35의 방어력을 얻습니다.',
-    tips: '근접 딜러나 탱커 위주의 강력한 전방 라인 구성 시',
-  },
-  {
-    id: 'sunfire-board',
-    name: '태양불꽃판',
-    tier: '골드',
-    tierType: TIER_TYPES.GOLD,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/sunfireboard2.png',
-    description: '전투 시작 시 모든 적에게 화상을 입혀 10초 동안 최대 체력의 10%에 해당하는 피해를 주고 회복량을 감소시킵니다.',
-    tips: '회복력이 높은 탱커 덱이나 피흡 조합을 카운터 칠 때',
-  },
-  {
-    id: 'rich-get-richer',
-    name: '부익부+',
-    tier: '골드',
-    tierType: TIER_TYPES.GOLD,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/richgetricherplus2.png',
-    description: '즉시 18골드를 획득합니다. 최대 이자가 7골드로 상승합니다.',
-    tips: '골드 유연성을 즉시 확보하여 급하게 7, 8레벨을 가야 할 때',
-  },
-  {
-    id: 'three-is-a-crowd',
-    name: '삼총사',
-    tier: '골드',
-    tierType: TIER_TYPES.GOLD,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/threeisacrowd2.png',
-    description: '내 필드에 똑같은 코스트의 유닛 3명을 배치하면, 해당 코스트 유닛들의 체력이 200 증가합니다.',
-    tips: '3코스트 혹은 4코스트 중심의 덱 밸런스를 구축할 때',
-  },
-  {
-    id: 'portable-forge',
-    name: '간이 대장간',
-    tier: '골드',
-    tierType: TIER_TYPES.GOLD,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/portableforge2.png',
-    description: '무작위 오른(Ornn) 유물 아이템 3개 중 1개를 선택하여 획득합니다.',
-    tips: '일반 아이템보다 강력한 특수 유물로 스노우볼을 굴릴 때',
-  },
-  {
-    id: 'cybernetic-implants',
-    name: '사이버네틱 이식술',
-    tier: '골드',
-    tierType: TIER_TYPES.GOLD,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/cyberneticimplants2.png',
-    description: '아이템을 장착한 아군 유닛의 체력이 250 증가하고 공격력이 20% 상승합니다.',
-    tips: '물리 공격(AD) 중심의 메인 캐리들이 많은 조합',
-  },
+export const AUGMENTS = koreanAugments
+  .map((ko, idx) => buildAugment(ko, idx))
+  .filter((a) => a.name && a.name.length > 0)
+  .sort((a, b) => {
+    const tierDiff = (TIER_ORDER[a.tier] ?? 99) - (TIER_ORDER[b.tier] ?? 99)
+    if (tierDiff !== 0) return tierDiff
+    return koCollator.compare(a.name, b.name)
+  })
 
-  // === 프리즘 등급 (Prism Tier) ===
-  {
-    id: 'golden-ticket',
-    name: '황금 티켓',
-    tier: '프리즘',
-    tierType: TIER_TYPES.PRISM,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/goldenticket3.png',
-    description: '상점을 새로고침할 때마다 50%의 확률로 무료 새로고침 기회를 얻습니다.',
-    tips: '3성 유닛을 핵심으로 하는 리롤 덱을 운영할 때',
-  },
-  {
-    id: 'new-recruit',
-    name: '신병',
-    tier: '프리즘',
-    tierType: TIER_TYPES.PRISM,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/newrecruit3.png',
-    description: '최대 팀 규모가 1 증가하고, 조합 아이템 모색기를 획득합니다.',
-    tips: '9레벨 또는 10레벨의 고밸류 5코스트 시너지 조합을 완성하고 싶을 때',
-  },
-  {
-    id: 'cruel-pact',
-    name: '잔혹한 계약',
-    tier: '프리즘',
-    tierType: TIER_TYPES.PRISM,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/cruelpact3.png',
-    description: '경험치를 구매할 때 골드 대신 플레이어의 체력을 6씩 소비합니다. 매 라운드 시작 전 체력이 3씩 회복됩니다.',
-    tips: '1라운드에 바로 7레벨을 찍고 트럭을 몰아 연승 가도를 달릴 때',
-  },
-  {
-    id: 'hedge-fund',
-    name: '헤지펀드',
-    tier: '프리즘',
-    tierType: TIER_TYPES.PRISM,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/hedgefund3.png',
-    description: '즉시 40골드를 획득합니다. 최대 이자가 무제한으로 해제되며, 10골드당 이자가 제한 없이 상승합니다.',
-    tips: '100골드 이상 모아 초고속 대부호 레벨업 운영을 하고 싶을 때',
-  },
-  {
-    id: 'radiant-relics',
-    name: '찬란한 유물',
-    tier: '프리즘',
-    tierType: TIER_TYPES.PRISM,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/radiantrelics3.png',
-    description: '강력한 찬란한(Radiant) 아이템 5개 중 1개를 선택하여 획득합니다.',
-    tips: '메인 캐리 기물에게 신급 아이템을 장착시켜 캐리력을 폭발시킬 때',
-  },
-  {
-    id: 'march-of-progress',
-    name: '진보의 행진',
-    tier: '프리즘',
-    tierType: TIER_TYPES.PRISM,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/marchofprogress3.png',
-    description: '더 이상 골드로 경험치를 살 수 없습니다. 대신 매 라운드 종료 시 자동으로 대량의 경험치(8)를 획득합니다.',
-    tips: '리롤에 온 돈을 투자하면서 자연 레벨업 타이밍을 노릴 때',
-  },
-  {
-    id: 'binary-airdrop',
-    name: '이중 보급',
-    tier: '프리즘',
-    tierType: TIER_TYPES.PRISM,
-    image: 'https://raw.communitydragon.org/latest/game/assets/maps/tft/icons/augments/hexcore/binaryairdrop3.png',
-    description: '전투 시작 시 아이템을 2개 장착한 유닛에게 무작위 완성 아이템 1개를 임시로 지급합니다.',
-    tips: '아이템 조각 분배 효율을 극대화하여 팀 전체 밸류를 높일 때',
-  }
-]; 
-
-export const DEFAULT_SELECTED_AUGMENT_ID = 'golden-ticket';
+export const DEFAULT_SELECTED_AUGMENT_ID = AUGMENTS[0]?.id ?? null
